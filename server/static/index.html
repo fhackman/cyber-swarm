@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>CYBER SWARM TRADING OS</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "void": "#070A0E",
+            "surface-1": "#0D1117",
+            "surface-2": "#131922",
+            "surface-3": "#1B222C",
+            "hairline": "#26303A",
+            "cyan-glow": "#00F0FF",
+            "green-alpha": "#00FF87",
+            "blue-infra": "#3A86FF",
+            "red-risk": "#FF3B69",
+            "amber-tactical": "#FF9F1C",
+            "gold-regime": "#FFD166",
+            "text-bright": "#F0F6FC",
+            "text-std": "#8B949E",
+            "text-muted": "#485260"
+          },
+          fontFamily: {
+            "headline": ["Space Grotesk", "sans-serif"],
+            "body": ["Inter", "sans-serif"],
+            "mono": ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      background-color: #070A0E;
+      color: #F0F6FC;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      border-radius: 0 !important;
+    }
+    * {
+      border-radius: 0 !important;
+    }
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #070A0E;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #26303A;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00F0FF;
+    }
+    .neon-border-cyan {
+      border: 1px solid #00F0FF;
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.25);
+    }
+    .neon-border-red {
+      border: 1px solid #FF3B69;
+      box-shadow: 0 0 12px rgba(255, 59, 105, 0.4);
+    }
+  </style>
+</head>
+<body class="bg-void text-text-bright selection:bg-cyan-glow selection:text-void text-xs">
+
+  <!-- TOP APP HEADER -->
+  <header class="fixed top-0 left-0 right-0 z-50 bg-void border-b border-hairline h-14 px-4 flex items-center justify-between">
+    <!-- Brand & System State -->
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-surface-2 border border-cyan-glow flex items-center justify-center text-cyan-glow font-mono font-bold text-sm">
+          CS
+        </div>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-2">
+            <span class="font-headline font-bold text-sm tracking-wider text-cyan-glow uppercase">CYBER SWARM OS</span>
+            <span class="px-1.5 py-0.5 bg-surface-2 border border-hairline font-mono text-[10px] text-text-std">v2.4.19-PROD</span>
+          </div>
+          <div class="flex items-center gap-2 font-mono text-[10px] text-text-muted">
+            <span class="flex items-center gap-1 text-green-alpha">
+              <span class="w-1.5 h-1.5 bg-green-alpha inline-block animate-pulse" id="header-conn-dot"></span>
+              <span id="header-connection">LIVE MT5</span>
+            </span>
+            <span>|</span>
+            <span id="header-network-pill" class="px-1.5 py-0.2 bg-surface-2 border border-green-alpha text-green-alpha font-bold tracking-wider">ONLINE</span>
+            <span>|</span>
+            <button onclick="triggerManualReconciliation()" id="resync-btn" title="Force Network Re-Sync & Reconcile Pending Orders" class="px-1.5 py-0.5 bg-cyan-glow/10 border border-cyan-glow/40 hover:bg-cyan-glow hover:text-void text-cyan-glow font-bold uppercase transition-colors flex items-center gap-0.5">
+              <span class="material-symbols-outlined text-[10px]">sync</span>
+              <span>RE-SYNC</span>
+            </button>
+            <span>|</span>
+            <span id="header-ping">PING 4.2ms</span>
+            <span>|</span>
+            <span id="header-cycle">CYCLE #84,209</span>
+            <span>|</span>
+            <span class="text-green-alpha">UPTIME 99.98%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="hidden lg:flex items-center h-full font-mono text-xs uppercase">
+      <button onclick="switchTab('overview')" id="tab-btn-overview" class="h-full px-4 flex items-center border-b-2 border-cyan-glow text-cyan-glow bg-surface-2">
+        Swarm Overview
+      </button>
+      <button onclick="switchTab('matrix')" id="tab-btn-matrix" class="h-full px-4 flex items-center border-b-2 border-transparent text-text-std hover:text-text-bright hover:bg-surface-1">
+        Agent Matrix (8/8)
+      </button>
+      <button onclick="switchTab('risk')" id="tab-btn-risk" class="h-full px-4 flex items-center border-b-2 border-transparent text-text-std hover:text-text-bright hover:bg-surface-1">
+        Risk Cockpit & Gate
+      </button>
+      <button onclick="switchTab('audit')" id="tab-btn-audit" class="h-full px-4 flex items-center border-b-2 border-transparent text-text-std hover:text-text-bright hover:bg-surface-1">
+        Execution & Audit Log
+      </button>
+    </nav>
+
+    <!-- Operational Controls -->
+    <div class="flex items-center gap-3">
+      <!-- Mode Badges -->
+      <div class="hidden sm:flex items-center bg-surface-1 border border-hairline p-0.5 font-mono text-[10px]">
+        <button onclick="setExecutionMode('LIVE')" id="mode-btn-live" class="px-2 py-0.5 text-text-muted hover:text-text-bright">LIVE</button>
+        <button onclick="setExecutionMode('PAPER')" id="mode-btn-paper" class="px-2 py-0.5 bg-surface-3 text-cyan-glow border border-cyan-glow/50 font-bold">PAPER</button>
+        <button onclick="setExecutionMode('BACKTEST')" id="mode-btn-backtest" class="px-2 py-0.5 text-text-muted hover:text-text-bright">BACKTEST</button>
+        <button onclick="setExecutionMode('SAFE')" id="mode-btn-safe" class="px-2 py-0.5 text-text-muted hover:text-text-bright">SAFE</button>
+      </div>
+
+      <!-- Auto Trade Bot Master Switch -->
+      <button onclick="toggleAutoTrade()" id="autotrade-btn" class="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-glow/20 border border-cyan-glow text-cyan-glow hover:bg-cyan-glow hover:text-void transition-colors font-mono font-bold text-[11px] uppercase tracking-wider">
+        <span class="material-symbols-outlined text-[14px]">smart_toy</span>
+        <span id="autotrade-text">AUTO BOT: ON (0.10 LOT)</span>
+      </button>
+
+      <!-- Lot Size Controller & Quick Presets -->
+      <div class="hidden sm:flex items-center bg-surface-1 border border-hairline font-mono text-[10px]" title="Adjust Execution Lot Size (0.01 - 5.00)">
+        <div class="flex items-center px-1.5 py-1 gap-1 border-r border-hairline">
+          <button onclick="adjustLotSize(-0.01)" title="Decrease Lot Size (-0.01)" class="w-4 h-4 flex items-center justify-center bg-surface-2 hover:bg-cyan-glow hover:text-void text-text-std border border-hairline font-bold transition-colors">−</button>
+          <span id="lot-size-badge" class="px-1.5 text-cyan-glow font-bold tracking-wider">0.10 LOT</span>
+          <button onclick="adjustLotSize(0.01)" title="Increase Lot Size (+0.01)" class="w-4 h-4 flex items-center justify-center bg-surface-2 hover:bg-cyan-glow hover:text-void text-text-std border border-hairline font-bold transition-colors">+</button>
+        </div>
+        <div class="flex items-center p-0.5" id="lot-presets-bar">
+          <button onclick="setLotSize(0.01)" id="lot-preset-001" class="px-1.5 py-0.5 text-text-muted hover:text-text-bright">0.01</button>
+          <button onclick="setLotSize(0.05)" id="lot-preset-005" class="px-1.5 py-0.5 text-text-muted hover:text-text-bright">0.05</button>
+          <button onclick="setLotSize(0.10)" id="lot-preset-010" class="px-1.5 py-0.5 bg-surface-3 text-cyan-glow border border-cyan-glow/50 font-bold">0.10</button>
+          <button onclick="setLotSize(0.20)" id="lot-preset-020" class="px-1.5 py-0.5 text-text-muted hover:text-text-bright">0.20</button>
+          <button onclick="setLotSize(0.50)" id="lot-preset-050" class="px-1.5 py-0.5 text-text-muted hover:text-text-bright">0.50</button>
+          <button onclick="setLotSize(1.00)" id="lot-preset-100" class="px-1.5 py-0.5 text-text-muted hover:text-text-bright">1.00</button>
+        </div>
+      </div>
+
+      <!-- Auto Trailing Stop Toggle -->
+      <button onclick="toggleTrailingStop()" id="trailing-stop-btn" class="hidden sm:flex items-center gap-1 px-2.5 py-1.5 bg-amber-tactical/20 border border-amber-tactical text-amber-tactical font-mono text-[10px] uppercase font-bold tracking-wider hover:bg-amber-tactical hover:text-void transition-colors">
+        <span class="material-symbols-outlined text-[13px]">trending_up</span>
+        <span id="trailing-stop-text">TRAILING: ON</span>
+      </button>
+
+      <!-- Auto Take Profit Master Switch & Quick Points Selector -->
+      <div class="hidden sm:flex items-center bg-surface-1 border border-hairline font-mono text-[10px]">
+        <button onclick="toggleTakeProfit()" id="takeprofit-btn" class="flex items-center gap-1 px-2.5 py-1.5 bg-green-alpha/20 border-r border-hairline text-green-alpha font-mono text-[10px] uppercase font-bold tracking-wider hover:bg-green-alpha hover:text-void transition-colors">
+          <span class="material-symbols-outlined text-[13px]">price_check</span>
+          <span id="takeprofit-text">TP: ON (200 PT)</span>
+        </button>
+        <div class="flex items-center p-0.5">
+          <button onclick="setTakeProfitPoints(100)" id="tp-preset-100" class="px-1.5 py-0.5 text-text-muted hover:text-text-bright">100</button>
+          <button onclick="setTakeProfitPoints(150)" id="tp-preset-150" class="px-1.5 py-0.5 text-text-muted hover:text-text-bright">150</button>
+          <button onclick="setTakeProfitPoints(200)" id="tp-preset-200" class="px-1.5 py-0.5 bg-surface-3 text-green-alpha border border-green-alpha/50 font-bold">200</button>
+          <button onclick="setTakeProfitPoints(250)" id="tp-preset-250" class="px-1.5 py-0.5 text-text-muted hover:text-text-bright">250</button>
+          <button onclick="setTakeProfitPoints(300)" id="tp-preset-300" class="px-1.5 py-0.5 text-text-muted hover:text-text-bright">300</button>
+        </div>
+      </div>
+
+      <!-- Agent Sync -->
+      <div class="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-surface-1 border border-hairline font-mono text-[11px]">
+        <span class="w-2 h-2 bg-green-alpha inline-block"></span>
+        <span class="text-text-bright font-bold">8/8</span>
+        <span class="text-text-std">NODES SYNC</span>
+      </div>
+
+      <!-- Emergency Stop Killswitch -->
+      <button onclick="toggleKillswitch()" id="killswitch-btn" class="flex items-center gap-1.5 px-3 py-1.5 bg-red-risk/20 border border-red-risk hover:bg-red-risk hover:text-void transition-colors font-mono font-bold text-red-risk text-[11px] uppercase tracking-wider">
+        <span class="material-symbols-outlined text-[14px]">lock</span>
+        <span id="killswitch-text">EMERGENCY STOP</span>
+      </button>
+
+      <!-- Desk Badge -->
+      <div class="hidden xl:flex flex-col text-right font-mono text-[10px] pl-2 border-l border-hairline">
+        <span class="text-cyan-glow font-bold" id="header-desk-id">QUANT-DESK-01</span>
+        <span class="text-green-alpha" id="header-desk-status">API CONNECTED</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- LIVE TICKER FEED STRIP -->
+  <div class="fixed top-14 left-0 right-0 z-40 bg-surface-1 border-b border-hairline h-8 px-4 flex items-center overflow-x-auto gap-6 font-mono text-[11px]">
+    <div class="flex items-center gap-1 shrink-0 text-text-muted uppercase font-bold text-[10px]">
+      <span class="w-1.5 h-1.5 bg-cyan-glow inline-block"></span>
+      <span>FEED TICKER:</span>
+    </div>
+    <div id="ticker-container" class="flex items-center gap-6">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-text-bright">XAUUSD</span>
+        <span id="tick-xauusd-price" class="text-text-bright">2,384.42</span>
+        <span id="tick-xauusd-change" class="text-green-alpha">+0.84% ▲</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-text-bright">BTCUSD</span>
+        <span id="tick-btcusd-price" class="text-text-bright">67,412.10</span>
+        <span id="tick-btcusd-change" class="text-red-risk">-1.12% ▼</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-text-bright">EURUSD</span>
+        <span id="tick-eurusd-price" class="text-text-bright">1.0894</span>
+        <span id="tick-eurusd-change" class="text-green-alpha">+0.15% ▲</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-text-bright">USOIL</span>
+        <span id="tick-usoil-price" class="text-text-bright">81.24</span>
+        <span id="tick-usoil-change" class="text-green-alpha">+2.10% ▲</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main class="pt-[90px] p-4 min-h-screen">
+    
+    <!-- TOP KPI ROW -->
+    <section class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2 mb-3">
+      <!-- KPI 1: Net Equity -->
+      <div class="bg-surface-1 border border-hairline p-2.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-text-muted font-mono text-[10px] uppercase">
+          <span>Net Equity</span>
+          <span class="material-symbols-outlined text-[14px] text-cyan-glow">account_balance_wallet</span>
+        </div>
+        <div class="mt-1">
+          <div id="kpi-equity" class="font-mono text-base font-bold text-cyan-glow truncate">$1,482,920.45</div>
+          <div class="font-mono text-[10px] text-green-alpha mt-0.5">+14.2% MTD</div>
+        </div>
+      </div>
+      <!-- KPI 2: Realized P&L -->
+      <div class="bg-surface-1 border border-hairline p-2.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-text-muted font-mono text-[10px] uppercase">
+          <span>Realized P&L</span>
+          <span class="material-symbols-outlined text-[14px] text-green-alpha">verified</span>
+        </div>
+        <div class="mt-1">
+          <div id="kpi-realized" class="font-mono text-base font-bold text-green-alpha truncate">+$142,390.00</div>
+          <div class="font-mono text-[10px] text-text-muted mt-0.5">BOOKED MTD</div>
+        </div>
+      </div>
+      <!-- KPI 3: Unrealized P&L -->
+      <div class="bg-surface-1 border border-hairline p-2.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-text-muted font-mono text-[10px] uppercase">
+          <span>Unrealized P&L</span>
+          <span class="w-2 h-2 bg-green-alpha animate-pulse inline-block"></span>
+        </div>
+        <div class="mt-1">
+          <div id="kpi-unrealized" class="font-mono text-base font-bold text-green-alpha truncate">+$18,450.20</div>
+          <div class="font-mono text-[10px] text-green-alpha mt-0.5">FLOAT LIVE ⚡</div>
+        </div>
+      </div>
+      <!-- KPI 4: 24h Swarm Vol -->
+      <div class="bg-surface-1 border border-hairline p-2.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-text-muted font-mono text-[10px] uppercase">
+          <span>24h Swarm Vol</span>
+          <span class="material-symbols-outlined text-[14px] text-cyan-glow">sync_alt</span>
+        </div>
+        <div class="mt-1">
+          <div id="kpi-volume" class="font-mono text-base font-bold text-text-bright truncate">$28.4M</div>
+          <div id="kpi-trades" class="font-mono text-[10px] text-text-muted mt-0.5">184 EXECUTIONS</div>
+        </div>
+      </div>
+      <!-- KPI 5: Win Rate -->
+      <div class="bg-surface-1 border border-hairline p-2.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-text-muted font-mono text-[10px] uppercase">
+          <span>Win Rate</span>
+          <span class="material-symbols-outlined text-[14px] text-green-alpha">query_stats</span>
+        </div>
+        <div class="mt-1">
+          <div id="kpi-winrate" class="font-mono text-base font-bold text-green-alpha truncate">74.2%</div>
+          <div class="font-mono text-[10px] text-text-muted mt-0.5">WALK-FORWARD STAT</div>
+        </div>
+      </div>
+      <!-- KPI 6: Max Drawdown -->
+      <div class="bg-surface-1 border border-hairline p-2.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-text-muted font-mono text-[10px] uppercase">
+          <span>Max Drawdown</span>
+          <span class="material-symbols-outlined text-[14px] text-cyan-glow">security</span>
+        </div>
+        <div class="mt-1">
+          <div id="kpi-drawdown" class="font-mono text-base font-bold text-cyan-glow truncate">2.14%</div>
+          <div class="font-mono text-[10px] text-text-muted mt-0.5">CAP 5.00% SAFE</div>
+        </div>
+      </div>
+      <!-- KPI 7: Open Positions -->
+      <div class="bg-surface-1 border border-hairline p-2.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-text-muted font-mono text-[10px] uppercase">
+          <span>Open Positions</span>
+          <span class="material-symbols-outlined text-[14px] text-cyan-glow">layers</span>
+        </div>
+        <div class="mt-1">
+          <div id="kpi-positions" class="font-mono text-base font-bold text-cyan-glow truncate">4 ACTIVE</div>
+          <div class="font-mono text-[10px] text-text-muted mt-0.5">3 LONG / 1 SHORT</div>
+        </div>
+      </div>
+      <!-- KPI 8: Risk Exposure -->
+      <div class="bg-surface-1 border border-hairline p-2.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-text-muted font-mono text-[10px] uppercase">
+          <span>Risk Exposure</span>
+          <span class="material-symbols-outlined text-[14px] text-cyan-glow">speed</span>
+        </div>
+        <div class="mt-1">
+          <div id="kpi-exposure" class="font-mono text-base font-bold text-text-bright truncate">18.6%</div>
+          <div class="font-mono text-[10px] text-green-alpha mt-0.5">HARD CAP 40%</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PIPELINE STAGE RUNWAY -->
+    <section class="bg-surface-1 border border-hairline px-4 py-2 mb-3 flex flex-wrap items-center justify-between gap-3 font-mono text-[11px]">
+      <div class="flex items-center gap-2 text-text-muted uppercase font-bold text-[10px]">
+        <span class="material-symbols-outlined text-[14px] text-cyan-glow">route</span>
+        <span>Execution Pipeline Flow:</span>
+      </div>
+      <div class="flex items-center gap-2 overflow-x-auto">
+        <span class="px-2.5 py-1 bg-surface-2 border border-hairline text-text-std">1. Feed: <span class="text-green-alpha font-bold">L2 OK</span></span>
+        <span class="text-text-muted">→</span>
+        <span class="px-2.5 py-1 bg-surface-2 border border-hairline text-text-std">2. Agents (8/8): <span class="text-green-alpha font-bold">VOTED</span></span>
+        <span class="text-text-muted">→</span>
+        <span id="pipeline-consensus" class="px-2.5 py-1 bg-cyan-glow text-void font-bold">3. Consensus (81.4% SELL)</span>
+        <span class="text-text-muted">→</span>
+        <span id="pipeline-risk" class="px-2.5 py-1 bg-surface-2 border border-green-alpha text-green-alpha font-semibold">4. Risk Gate: APPROVED</span>
+        <span class="text-text-muted">→</span>
+        <span id="pipeline-execution" class="px-2.5 py-1 bg-surface-2 border border-hairline text-cyan-glow animate-pulse font-bold">5. Execution: ROUTING</span>
+      </div>
+      <div class="text-text-muted text-[10px]">
+        Latency: <span class="text-green-alpha font-bold">142ms total</span>
+      </div>
+    </section>
+
+    <!-- VIEW 1: SWARM OVERVIEW -->
+    <div id="view-overview" class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+      <!-- LEFT COLUMN: Market Regime & Equity Telemetry (3 cols) -->
+      <div class="lg:col-span-3 flex flex-col gap-3">
+        <!-- Market Regime Card -->
+        <div class="bg-surface-1 border border-hairline p-3">
+          <div class="flex items-center justify-between pb-2 border-b border-hairline">
+            <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-text-bright uppercase">
+              <span class="material-symbols-outlined text-[14px] text-cyan-glow">radar</span>
+              <span>Market Regime Scanner</span>
+            </div>
+            <span class="px-1.5 py-0.5 bg-surface-2 text-green-alpha font-mono text-[9px] border border-green-alpha/40">ACTIVE</span>
+          </div>
+          <div class="flex flex-col gap-2 mt-2 font-mono text-[11px]">
+            <div class="flex items-center justify-between bg-surface-2 p-2 border border-hairline">
+              <span class="text-text-muted">Macro Regime</span>
+              <span class="text-cyan-glow font-bold">High Volatility Exp.</span>
+            </div>
+            <div class="flex items-center justify-between bg-surface-2 p-2 border border-hairline">
+              <span class="text-text-muted">State Driver</span>
+              <span class="text-cyan-glow font-bold">Macro Disconnect</span>
+            </div>
+            <div class="flex items-center justify-between bg-surface-2 p-2 border border-hairline">
+              <span class="text-text-muted">Global Session</span>
+              <span class="text-green-alpha font-bold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 bg-green-alpha inline-block"></span>
+                NY Session Active
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Equity Curve Chart -->
+        <div class="bg-surface-1 border border-hairline p-3">
+          <div class="flex items-center justify-between pb-2 border-b border-hairline">
+            <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-text-bright uppercase">
+              <span class="material-symbols-outlined text-[14px] text-green-alpha">show_chart</span>
+              <span>Equity Curve Telemetry</span>
+            </div>
+            <span class="font-mono text-green-alpha font-bold text-[11px]">+14.2%</span>
+          </div>
+          <div class="w-full h-32 bg-surface-2 border border-hairline mt-2 relative p-1 flex flex-col justify-end">
+            <!-- Grid Lines -->
+            <div class="absolute inset-0 opacity-10 flex flex-col justify-between p-2 pointer-events-none">
+              <div class="w-full h-px bg-text-bright"></div>
+              <div class="w-full h-px bg-text-bright"></div>
+              <div class="w-full h-px bg-text-bright"></div>
+            </div>
+            <!-- SVG Chart -->
+            <svg class="w-full h-24 overflow-visible" preserveAspectRatio="none" viewBox="0 0 300 100">
+              <defs>
+                <linearGradient id="eqGrad" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#00FF87" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#00FF87" stop-opacity="0.0"/>
+                </linearGradient>
+              </defs>
+              <polygon fill="url(#eqGrad)" points="0,90 25,82 60,84 95,70 130,73 170,55 210,58 250,35 300,12 300,100 0,100"></polygon>
+              <polyline fill="none" points="0,90 25,82 60,84 95,70 130,73 170,55 210,58 250,35 300,12" stroke="#00FF87" stroke-width="2"></polyline>
+              <circle cx="300" cy="12" r="3" fill="#00FF87"></circle>
+            </svg>
+            <div class="flex items-center justify-between pt-1 font-mono text-[9px] text-text-muted">
+              <span>00:00 UTC</span>
+              <span id="chart-equity-high" class="text-cyan-glow font-bold">1,482,920.45 HIGH</span>
+              <span>LIVE</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Micro-Signals Feed -->
+        <div class="bg-surface-1 border border-hairline p-3 flex-1">
+          <div class="flex items-center justify-between pb-2 border-b border-hairline">
+            <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-text-bright uppercase">
+              <span class="material-symbols-outlined text-[14px] text-cyan-glow">rss_feed</span>
+              <span>Micro-Signals Telemetry</span>
+            </div>
+            <span class="font-mono text-[9px] text-text-muted">LIVE FEED</span>
+          </div>
+          <div class="flex flex-col gap-1.5 mt-2 max-h-60 overflow-y-auto font-mono text-[10px]">
+            <div class="p-1.5 bg-surface-2 border border-hairline flex items-center justify-between">
+              <div>
+                <span class="text-cyan-glow font-bold">TIDAL</span>
+                <span class="text-text-bright">XAUUSD</span>
+                <span class="px-1 bg-red-risk text-void font-bold text-[9px]">SELL</span>
+                <div class="text-text-muted text-[9px]">Liq Sweep M15</div>
+              </div>
+              <div class="text-right">
+                <div class="text-green-alpha font-bold">92.4%</div>
+                <div class="text-text-muted text-[9px]">03:07:11</div>
+              </div>
+            </div>
+            <div class="p-1.5 bg-surface-2 border border-hairline flex items-center justify-between">
+              <div>
+                <span class="text-cyan-glow font-bold">ZEPHR</span>
+                <span class="text-text-bright">BTCUSD</span>
+                <span class="px-1 bg-green-alpha text-void font-bold text-[9px]">BUY</span>
+                <div class="text-text-muted text-[9px]">Orderbook skew +3.2</div>
+              </div>
+              <div class="text-right">
+                <div class="text-green-alpha font-bold">88.1%</div>
+                <div class="text-text-muted text-[9px]">03:06:58</div>
+              </div>
+            </div>
+            <div class="p-1.5 bg-surface-2 border border-hairline flex items-center justify-between">
+              <div>
+                <span class="text-cyan-glow font-bold">NORO</span>
+                <span class="text-text-bright">EURUSD</span>
+                <span class="px-1 bg-surface-3 text-text-std font-bold text-[9px]">NEUT</span>
+                <div class="text-text-muted text-[9px]">Mean reversion wait</div>
+              </div>
+              <div class="text-right">
+                <div class="text-text-std font-bold">54.0%</div>
+                <div class="text-text-muted text-[9px]">03:06:40</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER COLUMN: Swarm Core Topology & Consensus (6 cols) -->
+      <div class="lg:col-span-6 flex flex-col gap-3">
+        <!-- Swarm Core Topology Canvas Container -->
+        <div class="bg-surface-1 border border-hairline p-3 flex flex-col">
+          <div class="flex items-center justify-between pb-2 border-b border-hairline">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-cyan-glow">hub</span>
+              <div>
+                <span class="font-headline font-bold text-xs uppercase tracking-wider text-cyan-glow">Swarm Core Topology</span>
+                <span class="font-mono text-[10px] text-text-muted block">8 HETEROGENEOUS AGENTS CONVERGING</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 font-mono text-[10px]">
+              <span class="px-2 py-0.5 bg-surface-2 text-cyan-glow border border-cyan-glow/30 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 bg-cyan-glow animate-pulse inline-block"></span>
+                SYNC 100%
+              </span>
+            </div>
+          </div>
+
+          <!-- Interactive Topology SVG Visualizer -->
+          <div class="relative w-full h-[320px] bg-void border border-hairline my-2 flex items-center justify-center overflow-hidden">
+            <svg class="w-full h-full" viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg">
+              <!-- Grid background -->
+              <defs>
+                <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                  <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#131922" stroke-width="1"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+
+              <!-- Connection Lines from Peripheral Agents to Center Consensus Core -->
+              <!-- Center is at (300, 160) -->
+              <!-- NORO (120, 70) -->
+              <line x1="120" y1="70" x2="300" y2="160" stroke="#00F0FF" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.6"/>
+              <!-- LUMEN (300, 50) -->
+              <line x1="300" y1="50" x2="300" y2="160" stroke="#00F0FF" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.6"/>
+              <!-- TIDAL (480, 70) -->
+              <line x1="480" y1="70" x2="300" y2="160" stroke="#FF3B69" stroke-width="2" opacity="0.8"/>
+              <!-- ZEPHR (500, 160) -->
+              <line x1="500" y1="160" x2="300" y2="160" stroke="#FF3B69" stroke-width="2" opacity="0.8"/>
+              <!-- RUNE (480, 250) -->
+              <line x1="480" y1="250" x2="300" y2="160" stroke="#00FF87" stroke-width="2" opacity="0.8"/>
+              <!-- OKAPI (300, 270) -->
+              <line x1="300" y1="270" x2="300" y2="160" stroke="#00F0FF" stroke-width="1.5" opacity="0.6"/>
+              <!-- VESKA (120, 250) -->
+              <line x1="120" y1="250" x2="300" y2="160" stroke="#00F0FF" stroke-width="1.5" opacity="0.6"/>
+              <!-- MARIN (100, 160) -->
+              <line x1="100" y1="160" x2="300" y2="160" stroke="#00FF87" stroke-width="1.5" opacity="0.6"/>
+
+              <!-- Central Consensus Hub -->
+              <rect x="250" y="125" width="100" height="70" fill="#0D1117" stroke="#00F0FF" stroke-width="2"/>
+              <text x="300" y="148" fill="#00F0FF" font-family="JetBrains Mono" font-size="11" font-weight="bold" text-anchor="middle">SWARM CORE</text>
+              <text id="svg-consensus-score" x="300" y="166" fill="#FF3B69" font-family="JetBrains Mono" font-size="12" font-weight="bold" text-anchor="middle">81.4% SELL</text>
+              <text x="300" y="182" fill="#8B949E" font-family="JetBrains Mono" font-size="9" text-anchor="middle">XAUUSD M15</text>
+
+              <!-- Peripheral Agent Nodes -->
+              <!-- NORO -->
+              <rect x="80" y="55" width="80" height="30" fill="#131922" stroke="#26303A" stroke-width="1"/>
+              <text x="120" y="74" fill="#F0F6FC" font-family="JetBrains Mono" font-size="10" text-anchor="middle">NORO 78%</text>
+
+              <!-- LUMEN -->
+              <rect x="260" y="35" width="80" height="30" fill="#131922" stroke="#26303A" stroke-width="1"/>
+              <text x="300" y="54" fill="#F0F6FC" font-family="JetBrains Mono" font-size="10" text-anchor="middle">LUMEN 52%</text>
+
+              <!-- TIDAL -->
+              <rect x="440" y="55" width="80" height="30" fill="#131922" stroke="#FF3B69" stroke-width="1.5"/>
+              <text x="480" y="74" fill="#FF3B69" font-family="JetBrains Mono" font-size="10" font-weight="bold" text-anchor="middle">TIDAL 92%</text>
+
+              <!-- ZEPHR -->
+              <rect x="460" y="145" width="80" height="30" fill="#131922" stroke="#FF3B69" stroke-width="1.5"/>
+              <text x="500" y="164" fill="#FF3B69" font-family="JetBrains Mono" font-size="10" font-weight="bold" text-anchor="middle">ZEPHR 88%</text>
+
+              <!-- RUNE (Risk Gate) -->
+              <rect x="440" y="235" width="80" height="30" fill="#131922" stroke="#00FF87" stroke-width="1.5"/>
+              <text x="480" y="254" fill="#00FF87" font-family="JetBrains Mono" font-size="10" font-weight="bold" text-anchor="middle">RUNE (RISK)</text>
+
+              <!-- OKAPI -->
+              <rect x="260" y="255" width="80" height="30" fill="#131922" stroke="#26303A" stroke-width="1"/>
+              <text x="300" y="274" fill="#F0F6FC" font-family="JetBrains Mono" font-size="10" text-anchor="middle">OKAPI 81%</text>
+
+              <!-- VESKA -->
+              <rect x="80" y="235" width="80" height="30" fill="#131922" stroke="#26303A" stroke-width="1"/>
+              <text x="120" y="254" fill="#F0F6FC" font-family="JetBrains Mono" font-size="10" text-anchor="middle">VESKA (ROUT)</text>
+
+              <!-- MARIN -->
+              <rect x="60" y="145" width="80" height="30" fill="#131922" stroke="#26303A" stroke-width="1"/>
+              <text x="100" y="164" fill="#F0F6FC" font-family="JetBrains Mono" font-size="10" text-anchor="middle">MARIN (AUD)</text>
+            </svg>
+          </div>
+
+          <!-- Consensus Progress Bar -->
+          <div class="bg-surface-2 border border-hairline p-2.5">
+            <div class="flex items-center justify-between font-mono text-[11px] mb-1.5">
+              <span class="text-text-muted uppercase">Multi-Agent Aggregated Conviction:</span>
+              <span id="consensus-bar-text" class="text-red-risk font-bold">81.4% SELL (HIGH CONVICTION)</span>
+            </div>
+            <div class="w-full h-3 bg-void border border-hairline relative">
+              <div id="consensus-fill" class="h-full bg-red-risk transition-all duration-300" style="width: 81.4%;"></div>
+            </div>
+            <div class="flex items-center justify-between font-mono text-[9px] text-text-muted mt-1">
+              <span>0% (HOLD)</span>
+              <span>55% (WATCH)</span>
+              <span>70% (SIGNAL)</span>
+              <span>80% (HIGH)</span>
+              <span>90% (EXTREME)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mini Agent Quick Matrix -->
+        <div class="grid grid-cols-4 gap-2">
+          <div class="bg-surface-1 border border-hairline p-2 font-mono text-[10px]">
+            <div class="text-cyan-glow font-bold">NORO</div>
+            <div class="text-text-muted text-[9px]">Valuation</div>
+            <div class="text-text-bright font-semibold mt-1">78.0% <span class="text-red-risk">SELL</span></div>
+          </div>
+          <div class="bg-surface-1 border border-hairline p-2 font-mono text-[10px]">
+            <div class="text-cyan-glow font-bold">LUMEN</div>
+            <div class="text-text-muted text-[9px]">Macro/Sent</div>
+            <div class="text-text-bright font-semibold mt-1">52.0% <span class="text-text-std">NEUT</span></div>
+          </div>
+          <div class="bg-surface-1 border border-hairline p-2 font-mono text-[10px]">
+            <div class="text-cyan-glow font-bold">TIDAL</div>
+            <div class="text-text-muted text-[9px]">Tech/SMC</div>
+            <div class="text-red-risk font-bold mt-1">92.4% SELL</div>
+          </div>
+          <div class="bg-surface-1 border border-hairline p-2 font-mono text-[10px]">
+            <div class="text-cyan-glow font-bold">ZEPHR</div>
+            <div class="text-text-muted text-[9px]">Orderbook</div>
+            <div class="text-red-risk font-bold mt-1">88.1% SELL</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: Active Positions & Real-Time Orders (3 cols) -->
+      <div class="lg:col-span-3 flex flex-col gap-3">
+        <!-- Open Positions Table -->
+        <div class="bg-surface-1 border border-hairline p-3 flex flex-col flex-1">
+          <div class="flex items-center justify-between pb-2 border-b border-hairline">
+            <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-text-bright uppercase">
+              <span class="material-symbols-outlined text-[14px] text-cyan-glow">layers</span>
+              <span>Active Open Positions</span>
+            </div>
+            <span id="pos-count-badge" class="px-1.5 py-0.2 bg-surface-2 text-cyan-glow font-mono text-[9px] border border-cyan-glow/40">4 ACTIVE</span>
+          </div>
+          <div class="overflow-x-auto mt-2">
+            <table class="w-full text-left font-mono text-[10px]">
+              <thead>
+                <tr class="text-text-muted border-b border-hairline">
+                  <th class="py-1">SYM</th>
+                  <th class="py-1">SIDE</th>
+                  <th class="py-1">LOT</th>
+                  <th class="py-1">SL / TP / TRAIL</th>
+                  <th class="py-1 text-right">FLOAT P&L</th>
+                </tr>
+              </thead>
+              <tbody id="positions-table-body" class="divide-y divide-hairline">
+                <tr>
+                  <td class="py-1.5 font-bold text-text-bright">XAUUSD</td>
+                  <td class="py-1.5 text-red-risk font-bold">SELL</td>
+                  <td class="py-1.5">0.10</td>
+                  <td class="py-1.5 text-amber-tactical">TRAIL 2735.20</td>
+                  <td class="py-1.5 text-right text-green-alpha font-bold">+$180.00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pending Limit Orders Card -->
+        <div class="bg-surface-1 border border-hairline p-3 flex flex-col">
+          <div class="flex items-center justify-between pb-2 border-b border-hairline">
+            <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-text-bright uppercase">
+              <span class="material-symbols-outlined text-[14px] text-amber-tactical">pending_actions</span>
+              <span>Pending Limit Orders (Auto Limit)</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span id="reconciliation-badge" class="px-1.5 py-0.2 bg-surface-2 text-green-alpha font-mono text-[9px] border border-green-alpha/40" title="Network Reconnection Audit State">SYNCED</span>
+              <span id="pending-count-badge" class="px-1.5 py-0.2 bg-surface-2 text-amber-tactical font-mono text-[9px] border border-amber-tactical/40">0 PENDING</span>
+            </div>
+          </div>
+          <!-- Reconciliation Report Summary banner -->
+          <div id="reconciliation-summary" class="hidden my-1.5 p-1.5 bg-surface-2 border border-cyan-glow/30 font-mono text-[9px] text-cyan-glow flex items-center justify-between">
+            <span id="reconciliation-summary-text">RECONCILED: 0 reviewed</span>
+            <span id="reconciliation-summary-time" class="text-text-muted">JUST NOW</span>
+          </div>
+          <div class="overflow-x-auto mt-2 max-h-48 overflow-y-auto">
+            <table class="w-full text-left font-mono text-[10px]">
+              <thead>
+                <tr class="text-text-muted border-b border-hairline">
+                  <th class="py-1">SYM</th>
+                  <th class="py-1">TYPE</th>
+                  <th class="py-1">LOT</th>
+                  <th class="py-1">LIMIT PX</th>
+                  <th class="py-1 text-right">ACTION</th>
+                </tr>
+              </thead>
+              <tbody id="pending-orders-table-body" class="divide-y divide-hairline">
+                <tr>
+                  <td colspan="5" class="py-2 text-center text-text-muted text-[10px]">No pending limit orders active</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Quick Manual Limit Order Toggle -->
+          <div class="mt-2 pt-2 border-t border-hairline flex items-center justify-between font-mono text-[10px]">
+            <div class="flex items-center gap-1 text-text-muted">
+              <span>Lot:</span>
+              <input id="manual-lmt-lot" type="number" step="0.01" min="0.01" max="5.00" value="0.10" class="w-12 px-1 py-0.5 bg-surface-2 border border-cyan-glow/40 text-cyan-glow font-bold text-[10px]" />
+            </div>
+            <div class="flex items-center gap-1">
+              <input id="manual-lmt-price" type="number" step="0.01" placeholder="Price" class="w-16 px-1 py-0.5 bg-surface-2 border border-hairline text-text-bright text-[10px]" />
+              <input id="manual-lmt-tp" type="number" min="100" max="300" placeholder="TP pt" class="w-14 px-1 py-0.5 bg-surface-2 border border-hairline text-text-bright text-[10px]" />
+              <select id="manual-lmt-sym" class="px-1 py-0.5 bg-surface-2 border border-hairline text-text-bright text-[10px]">
+                <option value="XAUUSD">XAUUSD</option>
+                <option value="BTCUSD">BTCUSD</option>
+                <option value="EURUSD">EURUSD</option>
+                <option value="USOIL">USOIL</option>
+              </select>
+              <select id="manual-lmt-type" class="px-1 py-0.5 bg-surface-2 border border-hairline text-text-bright text-[10px]">
+                <option value="BUY_LIMIT">BUY LIMIT</option>
+                <option value="SELL_LIMIT">SELL LIMIT</option>
+              </select>
+              <button onclick="submitManualLimitOrder()" class="px-2 py-0.5 bg-cyan-glow text-void font-bold hover:bg-white transition-colors">SEND</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Exposure Distribution -->
+        <div class="bg-surface-1 border border-hairline p-3">
+          <div class="flex items-center justify-between pb-2 border-b border-hairline">
+            <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-text-bright uppercase">
+              <span class="material-symbols-outlined text-[14px] text-cyan-glow">pie_chart</span>
+              <span>Asset Exposure Allocation</span>
+            </div>
+          </div>
+          <div class="flex flex-col gap-2 mt-2 font-mono text-[10px]">
+            <div>
+              <div class="flex justify-between text-text-std mb-1">
+                <span>XAUUSD (Gold)</span>
+                <span class="text-text-bright font-bold">38.4%</span>
+              </div>
+              <div class="w-full h-1.5 bg-void border border-hairline">
+                <div class="h-full bg-cyan-glow" style="width: 38.4%;"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-text-std mb-1">
+                <span>BTCUSD (Crypto)</span>
+                <span class="text-text-bright font-bold">24.2%</span>
+              </div>
+              <div class="w-full h-1.5 bg-void border border-hairline">
+                <div class="h-full bg-blue-infra" style="width: 24.2%;"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-text-std mb-1">
+                <span>USOIL (Crude)</span>
+                <span class="text-text-bright font-bold">20.5%</span>
+              </div>
+              <div class="w-full h-1.5 bg-void border border-hairline">
+                <div class="h-full bg-amber-tactical" style="width: 20.5%;"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-text-std mb-1">
+                <span>EURUSD (Forex)</span>
+                <span class="text-text-bright font-bold">16.9%</span>
+              </div>
+              <div class="w-full h-1.5 bg-void border border-hairline">
+                <div class="h-full bg-green-alpha" style="width: 16.9%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: AGENT SWARM MATRIX (Hidden by default) -->
+    <div id="view-matrix" class="hidden flex-col gap-3">
+      <div class="flex items-center justify-between bg-surface-1 border border-hairline p-3">
+        <div>
+          <h2 class="font-headline font-bold text-sm uppercase tracking-wider text-cyan-glow">Heterogeneous Swarm Matrix</h2>
+          <span class="font-mono text-[10px] text-text-muted">8 AUTONOMOUS NODES WITH AICL PROTOCOL DISPATCH</span>
+        </div>
+        <div class="flex items-center gap-2 font-mono text-[10px]">
+          <span class="px-2 py-1 bg-surface-2 text-green-alpha border border-green-alpha/40">ALL NODES HEALTHY</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3" id="agent-matrix-grid">
+        <!-- Cards generated dynamically or seeded via JS -->
+      </div>
+    </div>
+
+    <!-- VIEW 3: RISK COCKPIT & GATE (Hidden by default) -->
+    <div id="view-risk" class="hidden flex-col gap-3">
+      <div class="bg-surface-1 border border-hairline p-3">
+        <h2 class="font-headline font-bold text-sm uppercase tracking-wider text-green-alpha">RUNE Institutional Risk Gate</h2>
+        <span class="font-mono text-[10px] text-text-muted">DETERMINISTIC INVARIANT CHECKER (FAIL-CLOSED)</span>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <!-- Gate Rules -->
+        <div class="bg-surface-1 border border-hairline p-3">
+          <span class="font-mono text-[11px] font-bold text-text-bright uppercase">Invariant Constraints</span>
+          <div class="flex flex-col gap-2 mt-2 font-mono text-[10px]">
+            <div class="p-2 bg-surface-2 border border-hairline flex items-center justify-between">
+              <span>Daily Max Drawdown Cap</span>
+              <span class="text-green-alpha font-bold">5.0% (Current 2.14%) [PASS]</span>
+            </div>
+            <div class="p-2 bg-surface-2 border border-hairline flex items-center justify-between">
+              <span>Max Single Trade Risk</span>
+              <span class="text-green-alpha font-bold">2.0% (Allocated 1.45%) [PASS]</span>
+            </div>
+            <div class="p-2 bg-surface-2 border border-hairline flex items-center justify-between">
+              <span>Aggregate Exposure Cap</span>
+              <span class="text-green-alpha font-bold">40.0% (Current 18.6%) [PASS]</span>
+            </div>
+            <div class="p-2 bg-surface-2 border border-hairline flex items-center justify-between">
+              <span>Stale Data Latency Guard</span>
+              <span class="text-green-alpha font-bold">&lt; 2000ms (Current 142ms) [PASS]</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Emergency Killswitch Controls -->
+        <div class="bg-surface-1 border border-hairline p-3 flex flex-col justify-between">
+          <div>
+            <span class="font-mono text-[11px] font-bold text-text-bright uppercase">Emergency Halt Circuit Breaker</span>
+            <p class="font-body text-[11px] text-text-std mt-1">
+              Triggering the killswitch forces all subsequent signals to reject immediately, halts automated routing, and locks capital.
+            </p>
+          </div>
+          <div class="mt-4">
+            <button onclick="toggleKillswitch()" class="w-full py-2.5 bg-red-risk text-void font-mono font-bold text-xs uppercase hover:bg-white transition-colors">
+              TOGGLE GLOBAL KILLSWITCH
+            </button>
+          </div>
+        </div>
+
+        <!-- Recent Risk Approvals -->
+        <div class="bg-surface-1 border border-hairline p-3">
+          <span class="font-mono text-[11px] font-bold text-text-bright uppercase">Recent Gate Evaluations</span>
+          <div id="risk-evaluations-log" class="flex flex-col gap-1.5 mt-2 max-h-48 overflow-y-auto font-mono text-[10px]">
+            <div class="p-1 bg-surface-2 border border-green-alpha/30 text-green-alpha">
+              [APPROVED] XAUUSD SELL 0.10 lot (Risk 1.45%)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 4: EXECUTION & AUDIT LOG (Hidden by default) -->
+    <div id="view-audit" class="hidden flex-col gap-3">
+      <div class="flex items-center justify-between bg-surface-1 border border-hairline p-3">
+        <div>
+          <h2 class="font-headline font-bold text-sm uppercase tracking-wider text-cyan-glow">Cryptographic Audit Timeline (MARIN)</h2>
+          <span class="font-mono text-[10px] text-text-muted">IMMUTABLE SHA-256 HASH-CHAINED DECISION LOG</span>
+        </div>
+        <span class="px-2 py-0.5 bg-surface-2 text-green-alpha font-mono text-[10px] border border-green-alpha/40">HASH INTEGRITY VERIFIED</span>
+      </div>
+
+      <div class="bg-surface-1 border border-hairline p-3 overflow-x-auto">
+        <table class="w-full text-left font-mono text-[11px]">
+          <thead>
+            <tr class="text-text-muted border-b border-hairline">
+              <th class="py-1">IDX</th>
+              <th class="py-1">TIME (UTC)</th>
+              <th class="py-1">SOURCE</th>
+              <th class="py-1">EVENT</th>
+              <th class="py-1">AUDIT MESSAGE</th>
+              <th class="py-1 text-right">HASH (SHA256)</th>
+            </tr>
+          </thead>
+          <tbody id="audit-table-body" class="divide-y divide-hairline text-text-bright">
+            <!-- Populated via WebSocket -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- CLIENT-SIDE CONTROLLER & WEBSOCKET CLIENT -->
+  <script>
+    let ws = null;
+    let isKillswitchActive = false;
+    let activeTab = 'overview';
+
+    function switchTab(tabName) {
+      activeTab = tabName;
+      ['overview', 'matrix', 'risk', 'audit'].forEach(t => {
+        const viewEl = document.getElementById(`view-${t}`);
+        const btnEl = document.getElementById(`tab-btn-${t}`);
+        if (viewEl && btnEl) {
+          if (t === tabName) {
+            viewEl.classList.remove('hidden');
+            btnEl.className = 'h-full px-4 flex items-center border-b-2 border-cyan-glow text-cyan-glow bg-surface-2';
+          } else {
+            viewEl.classList.add('hidden');
+            btnEl.className = 'h-full px-4 flex items-center border-b-2 border-transparent text-text-std hover:text-text-bright hover:bg-surface-1';
+          }
+        }
+      });
+    }
+
+    async function setExecutionMode(mode) {
+      try {
+        const resp = await fetch('/api/mode', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({mode: mode})
+        });
+        const data = await resp.json();
+        updateModeButtons(data.mode);
+      } catch (err) {
+        console.error("Failed to set mode:", err);
+      }
+    }
+
+    function updateModeButtons(mode) {
+      ['LIVE', 'PAPER', 'BACKTEST', 'SAFE'].forEach(m => {
+        const btn = document.getElementById(`mode-btn-${m.toLowerCase()}`);
+        if (m === mode) {
+          btn.className = 'px-2 py-0.5 bg-surface-3 text-cyan-glow border border-cyan-glow/50 font-bold';
+        } else {
+          btn.className = 'px-2 py-0.5 text-text-muted hover:text-text-bright';
+        }
+      });
+    }
+
+    async function toggleKillswitch() {
+      const action = isKillswitchActive ? 'reset' : 'trigger';
+      try {
+        const resp = await fetch('/api/killswitch', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({action: action, reason: 'Operator UI Button'})
+        });
+        const data = await resp.json();
+        isKillswitchActive = data.killswitch_active;
+        updateKillswitchUI(isKillswitchActive);
+      } catch (err) {
+        console.error("Failed to toggle killswitch:", err);
+      }
+    }
+
+    function updateKillswitchUI(active) {
+      const btn = document.getElementById('killswitch-btn');
+      const txt = document.getElementById('killswitch-text');
+      if (active) {
+        btn.className = 'flex items-center gap-1.5 px-3 py-1.5 bg-red-risk text-void border border-white font-mono font-bold text-[11px] uppercase tracking-wider animate-bounce';
+        txt.textContent = 'HALTED / KILLSWITCH ACTIVE';
+      } else {
+        btn.className = 'flex items-center gap-1.5 px-3 py-1.5 bg-red-risk/20 border border-red-risk hover:bg-red-risk hover:text-void transition-colors font-mono font-bold text-red-risk text-[11px] uppercase tracking-wider';
+        txt.textContent = 'EMERGENCY STOP';
+      }
+    }
+
+    let isAutoTradeEnabled = true;
+    let isTrailingStopEnabled = true;
+
+    async function toggleAutoTrade() {
+      const next = !isAutoTradeEnabled;
+      try {
+        const resp = await fetch('/api/autotrade', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({enabled: next})
+        });
+        const data = await resp.json();
+        isAutoTradeEnabled = data.auto_trade_enabled;
+        updateAutoTradeUI(isAutoTradeEnabled);
+      } catch (err) {
+        console.error("Failed to toggle autotrade:", err);
+      }
+    }
+
+    let currentLotSize = 0.10;
+    const lotPresets = [0.01, 0.05, 0.10, 0.20, 0.50, 1.00];
+
+    function updateAutoTradeUI(enabled) {
+      const btn = document.getElementById('autotrade-btn');
+      const txt = document.getElementById('autotrade-text');
+      if (!btn || !txt) return;
+      if (enabled) {
+        btn.className = 'flex items-center gap-1.5 px-3 py-1.5 bg-cyan-glow/20 border border-cyan-glow text-cyan-glow hover:bg-cyan-glow hover:text-void transition-colors font-mono font-bold text-[11px] uppercase tracking-wider';
+        txt.textContent = `AUTO BOT: ON (${currentLotSize.toFixed(2)} LOT)`;
+      } else {
+        btn.className = 'flex items-center gap-1.5 px-3 py-1.5 bg-red-risk/20 border border-red-risk text-red-risk hover:bg-red-risk hover:text-void transition-colors font-mono font-bold text-[11px] uppercase tracking-wider';
+        txt.textContent = 'AUTO BOT: OFF (PAUSED)';
+      }
+    }
+
+    async function setLotSize(lot) {
+      const val = Math.max(0.01, Math.min(5.00, parseFloat(lot.toFixed(2))));
+      try {
+        const resp = await fetch('/api/config/lot-size', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({lot_size: val})
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+          currentLotSize = data.lot_size;
+          updateLotSizeUI(currentLotSize);
+        } else {
+          alert(`Failed to set lot size: ${data.detail || 'Error'}`);
+        }
+      } catch (err) {
+        console.error("Failed to set lot size:", err);
+      }
+    }
+
+    async function adjustLotSize(delta) {
+      const next = Math.round((currentLotSize + delta) * 100) / 100;
+      await setLotSize(next);
+    }
+
+    function updateLotSizeUI(lot) {
+      currentLotSize = lot;
+      const badge = document.getElementById('lot-size-badge');
+      if (badge) {
+        badge.textContent = `${lot.toFixed(2)} LOT`;
+      }
+      const autoTxt = document.getElementById('autotrade-text');
+      if (autoTxt && isAutoTradeEnabled) {
+        autoTxt.textContent = `AUTO BOT: ON (${lot.toFixed(2)} LOT)`;
+      }
+      const manualLot = document.getElementById('manual-lmt-lot');
+      if (manualLot) {
+        manualLot.value = lot.toFixed(2);
+      }
+      lotPresets.forEach(p => {
+        const pKey = Math.round(p * 100).toString().padStart(3, '0');
+        const btn = document.getElementById(`lot-preset-${pKey}`);
+        if (btn) {
+          if (Math.abs(p - lot) < 0.001) {
+            btn.className = 'px-1.5 py-0.5 bg-surface-3 text-cyan-glow border border-cyan-glow/50 font-bold';
+          } else {
+            btn.className = 'px-1.5 py-0.5 text-text-muted hover:text-text-bright';
+          }
+        }
+      });
+    }
+
+    async function toggleTrailingStop() {
+      const next = !isTrailingStopEnabled;
+      try {
+        const resp = await fetch('/api/trailing-stop/toggle', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({enabled: next})
+        });
+        const data = await resp.json();
+        isTrailingStopEnabled = data.trailing_stop_enabled;
+        updateTrailingStopUI(isTrailingStopEnabled);
+      } catch (err) {
+        console.error("Failed to toggle trailing stop:", err);
+      }
+    }
+
+    function updateTrailingStopUI(enabled) {
+      const btn = document.getElementById('trailing-stop-btn');
+      const txt = document.getElementById('trailing-stop-text');
+      if (!btn || !txt) return;
+      if (enabled) {
+        btn.className = 'hidden sm:flex items-center gap-1 px-2.5 py-1.5 bg-amber-tactical/20 border border-amber-tactical text-amber-tactical font-mono text-[10px] uppercase font-bold tracking-wider hover:bg-amber-tactical hover:text-void transition-colors';
+        txt.textContent = 'TRAILING: ON';
+      } else {
+        btn.className = 'hidden sm:flex items-center gap-1 px-2.5 py-1.5 bg-surface-2 border border-hairline text-text-muted font-mono text-[10px] uppercase tracking-wider hover:text-text-bright transition-colors';
+        txt.textContent = 'TRAILING: OFF';
+      }
+    }
+
+    let isTakeProfitEnabled = true;
+    let currentTakeProfitPoints = 200;
+
+    async function toggleTakeProfit() {
+      const next = !isTakeProfitEnabled;
+      try {
+        const resp = await fetch('/api/takeprofit', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({enabled: next})
+        });
+        const data = await resp.json();
+        isTakeProfitEnabled = data.take_profit_enabled;
+        currentTakeProfitPoints = data.take_profit_points;
+        updateTakeProfitUI(isTakeProfitEnabled, currentTakeProfitPoints);
+      } catch (err) {
+        console.error("Failed to toggle take profit:", err);
+      }
+    }
+
+    async function setTakeProfitPoints(pts) {
+      try {
+        const resp = await fetch('/api/takeprofit', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({points: pts})
+        });
+        const data = await resp.json();
+        isTakeProfitEnabled = data.take_profit_enabled;
+        currentTakeProfitPoints = data.take_profit_points;
+        updateTakeProfitUI(isTakeProfitEnabled, currentTakeProfitPoints);
+      } catch (err) {
+        console.error("Failed to set take profit points:", err);
+      }
+    }
+
+    function updateTakeProfitUI(enabled, points) {
+      const btn = document.getElementById('takeprofit-btn');
+      const txt = document.getElementById('takeprofit-text');
+      if (btn && txt) {
+        if (enabled) {
+          btn.className = 'flex items-center gap-1 px-2.5 py-1.5 bg-green-alpha/20 border-r border-hairline text-green-alpha font-mono text-[10px] uppercase font-bold tracking-wider hover:bg-green-alpha hover:text-void transition-colors';
+          txt.textContent = `TP: ON (${points} PT)`;
+        } else {
+          btn.className = 'flex items-center gap-1 px-2.5 py-1.5 bg-surface-2 border-r border-hairline text-text-muted font-mono text-[10px] uppercase tracking-wider hover:text-text-bright transition-colors';
+          txt.textContent = `TP: OFF (${points} PT)`;
+        }
+      }
+      [100, 150, 200, 250, 300].forEach(p => {
+        const presetBtn = document.getElementById(`tp-preset-${p}`);
+        if (presetBtn) {
+          if (p === points) {
+            presetBtn.className = 'px-1.5 py-0.5 bg-surface-3 text-green-alpha border border-green-alpha/50 font-bold';
+          } else {
+            presetBtn.className = 'px-1.5 py-0.5 text-text-muted hover:text-text-bright';
+          }
+        }
+      });
+    }
+
+    async function submitManualLimitOrder() {
+      const sym = document.getElementById('manual-lmt-sym').value;
+      const orderType = document.getElementById('manual-lmt-type').value;
+      const priceVal = parseFloat(document.getElementById('manual-lmt-price').value);
+      if (isNaN(priceVal) || priceVal <= 0) {
+        alert("Please enter a valid limit order price");
+        return;
+      }
+      const tpValStr = document.getElementById('manual-lmt-tp').value;
+      const tpVal = tpValStr ? parseInt(tpValStr, 10) : null;
+      if (tpVal !== null && (isNaN(tpVal) || tpVal < 100 || tpVal > 300)) {
+        alert("Take Profit points must be between 100 and 300 points");
+        return;
+      }
+      const dir = orderType.startsWith('BUY') ? 'BUY' : 'SELL';
+      const lotInput = document.getElementById('manual-lmt-lot');
+      const lotVal = lotInput ? parseFloat(lotInput.value) : currentLotSize;
+      if (isNaN(lotVal) || lotVal < 0.01 || lotVal > 5.00) {
+        alert("Lot size must be between 0.01 and 5.00");
+        return;
+      }
+      try {
+        const payload = {
+          symbol: sym,
+          direction: dir,
+          order_type: orderType,
+          limit_price: priceVal,
+          lot_size: lotVal
+        };
+        if (tpVal !== null) {
+          payload.take_profit_points = tpVal;
+        }
+        const resp = await fetch('/api/orders/limit', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+          document.getElementById('manual-lmt-price').value = '';
+          document.getElementById('manual-lmt-tp').value = '';
+          fetchInitialState();
+        } else {
+          alert(`Error placing limit order: ${data.detail || 'Failed'}`);
+        }
+      } catch (err) {
+        console.error("Error submitting limit order:", err);
+      }
+    }
+
+    async function cancelPendingOrder(orderId) {
+      try {
+        const resp = await fetch(`/api/orders/pending/${orderId}`, {
+          method: 'DELETE'
+        });
+        if (resp.ok) {
+          fetchInitialState();
+        }
+      } catch (err) {
+        console.error("Failed to cancel pending order:", err);
+      }
+    }
+
+    function initWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws/telemetry`;
+      try {
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log("CYBER SWARM Telemetry Connected");
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type !== 'HEARTBEAT') {
+              handleTelemetry(data);
+            }
+          } catch (e) {
+            console.error("Error parsing telemetry message:", e);
+          }
+        };
+
+        ws.onerror = (err) => {
+          console.warn("WebSocket encountered error:", err);
+        };
+
+        ws.onclose = () => {
+          console.log("WebSocket Closed. Reconnecting in 2s...");
+          setTimeout(initWebSocket, 2000);
+        };
+      } catch (err) {
+        console.error("Failed to initialize WebSocket:", err);
+        setTimeout(initWebSocket, 2000);
+      }
+    }
+
+    async function triggerManualReconciliation() {
+      const btn = document.getElementById('resync-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-[10px] animate-spin">sync</span><span>SYNCING...</span>';
+      }
+      try {
+        const resp = await fetch('/api/network/reconcile', { method: 'POST' });
+        if (resp.ok) {
+          const data = await resp.json();
+          updateReconciliationUI(data.report);
+          await fetchInitialState();
+        }
+      } catch (err) {
+        console.error("Manual reconciliation failed:", err);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span class="material-symbols-outlined text-[10px]">sync</span><span>RE-SYNC</span>';
+        }
+      }
+    }
+
+    function updateReconciliationUI(report) {
+      if (!report) return;
+      const summaryDiv = document.getElementById('reconciliation-summary');
+      const summaryText = document.getElementById('reconciliation-summary-text');
+      const summaryTime = document.getElementById('reconciliation-summary-time');
+      const badge = document.getElementById('reconciliation-badge');
+      if (summaryDiv && summaryText) {
+        summaryDiv.classList.remove('hidden');
+        summaryText.textContent = `RECONCILED: ${report.total_reviewed} reviewed | ${report.retained_count} kept | ${report.cancelled_count} cancelled | ${report.filled_count} adopted`;
+        if (summaryTime && report.timestamp) {
+          summaryTime.textContent = new Date(report.timestamp).toLocaleTimeString();
+        }
+      }
+      if (badge) {
+        badge.textContent = `AUDIT: ${report.total_reviewed} REV`;
+        badge.className = report.cancelled_count > 0 
+          ? "px-1.5 py-0.2 bg-red-risk/20 text-red-risk font-mono text-[9px] border border-red-risk/40"
+          : "px-1.5 py-0.2 bg-surface-2 text-green-alpha font-mono text-[9px] border border-green-alpha/40";
+      }
+    }
+
+    async function fetchInitialState() {
+      try {
+        const resp = await fetch('/api/state');
+        if (resp.ok) {
+          const data = await resp.json();
+          handleTelemetry(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch initial state:", err);
+      }
+    }
+
+    function handleTelemetry(payload) {
+      if (!payload) return;
+
+      // 1. Config & Mode
+      if (payload.config) {
+        isKillswitchActive = payload.config.killswitch;
+        updateKillswitchUI(isKillswitchActive);
+        updateModeButtons(payload.config.mode);
+
+        if (payload.config.auto_trade_enabled !== undefined) {
+          isAutoTradeEnabled = payload.config.auto_trade_enabled;
+          updateAutoTradeUI(isAutoTradeEnabled);
+        }
+        if (payload.config.trailing_stop_enabled !== undefined) {
+          isTrailingStopEnabled = payload.config.trailing_stop_enabled;
+          updateTrailingStopUI(isTrailingStopEnabled);
+        }
+        if (payload.config.take_profit_enabled !== undefined) {
+          isTakeProfitEnabled = payload.config.take_profit_enabled;
+        }
+        if (payload.config.take_profit_points !== undefined) {
+          currentTakeProfitPoints = payload.config.take_profit_points;
+        }
+        updateTakeProfitUI(isTakeProfitEnabled, currentTakeProfitPoints);
+
+        if (payload.config.fixed_lot_size !== undefined) {
+          updateLotSizeUI(payload.config.fixed_lot_size);
+        } else if (payload.config.lot_size !== undefined) {
+          updateLotSizeUI(payload.config.lot_size);
+        }
+
+        const connEl = document.getElementById('header-connection');
+        const pingEl = document.getElementById('header-ping');
+        const deskIdEl = document.getElementById('header-desk-id');
+        const deskStatusEl = document.getElementById('header-desk-status');
+
+        if (deskIdEl && payload.config.desk_id) {
+          deskIdEl.textContent = payload.config.desk_id;
+        }
+        if (deskStatusEl) {
+          deskStatusEl.textContent = payload.config.mt5_connected ? "MT5 REAL CONNECTED" : "SIMULATION FEED";
+          deskStatusEl.className = payload.config.mt5_connected ? "text-green-alpha font-bold" : "text-amber-tactical";
+        }
+        if (connEl) {
+          if (payload.config.mt5_connected) {
+            connEl.textContent = `LIVE MT5 [${payload.config.mt5_server || 'Eightcap'}]`;
+            connEl.className = 'text-green-alpha font-bold';
+          } else {
+            connEl.textContent = 'SIMULATOR FEED';
+            connEl.className = 'text-amber-tactical';
+          }
+        }
+        if (pingEl && payload.config.mt5_ping_ms !== undefined) {
+          pingEl.textContent = `PING ${payload.config.mt5_ping_ms}ms`;
+        }
+
+        const netPill = document.getElementById('header-network-pill');
+        const netStatus = payload.config.network_status || (payload.portfolio && payload.portfolio.network_status) || 'ONLINE';
+        if (netPill) {
+          netPill.textContent = netStatus;
+          if (netStatus === 'ONLINE' || netStatus === 'SYNCED') {
+            netPill.className = 'px-1.5 py-0.2 bg-surface-2 border border-green-alpha text-green-alpha font-bold tracking-wider';
+          } else if (netStatus === 'RECONCILING' || netStatus === 'RECONNECTING') {
+            netPill.className = 'px-1.5 py-0.2 bg-amber-tactical/20 border border-amber-tactical text-amber-tactical font-bold tracking-wider animate-pulse';
+          } else {
+            netPill.className = 'px-1.5 py-0.2 bg-red-risk/20 border border-red-risk text-red-risk font-bold tracking-wider';
+          }
+        }
+      }
+
+      // Reconciliation report update if provided
+      const lastRec = (payload.config && payload.config.last_reconciliation) || payload.last_reconciliation || (payload.portfolio && payload.portfolio.last_reconciliation);
+      if (lastRec) {
+        updateReconciliationUI(lastRec);
+      }
+
+      // 2. Portfolio KPIs & Open Positions
+      if (payload.portfolio) {
+        const p = payload.portfolio;
+        const eqEl = document.getElementById('kpi-equity');
+        const chartEq = document.getElementById('chart-equity-high');
+        if (eqEl) eqEl.textContent = `$${p.net_equity.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        if (chartEq) chartEq.textContent = `$${p.net_equity.toLocaleString('en-US', {minimumFractionDigits: 2})} HIGH`;
+
+        const rPnl = document.getElementById('kpi-realized');
+        if (rPnl) rPnl.textContent = `${p.realized_pnl_mtd >= 0 ? '+' : ''}$${p.realized_pnl_mtd.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        
+        const uPnl = document.getElementById('kpi-unrealized');
+        if (uPnl) uPnl.textContent = `${p.unrealized_pnl >= 0 ? '+' : ''}$${p.unrealized_pnl.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        
+        const ddEl = document.getElementById('kpi-drawdown');
+        if (ddEl) ddEl.textContent = `${p.daily_drawdown_pct.toFixed(2)}%`;
+        
+        const expEl = document.getElementById('kpi-exposure');
+        if (expEl) expEl.textContent = `${p.risk_exposure_pct.toFixed(1)}%`;
+        
+        const wrEl = document.getElementById('kpi-winrate');
+        if (wrEl) wrEl.textContent = `${p.win_rate_pct.toFixed(1)}%`;
+        
+        const trEl = document.getElementById('kpi-trades');
+        if (trEl) trEl.textContent = `${p.total_trades} EXECUTIONS`;
+
+        const kpiPos = document.getElementById('kpi-positions');
+        if (kpiPos) kpiPos.textContent = `${p.open_positions ? p.open_positions.length : 0} ACTIVE`;
+
+        const cycEl = document.getElementById('header-cycle');
+        if (cycEl) cycEl.textContent = `CYCLE #${(p.active_cycle || 84209).toLocaleString()}`;
+
+        // Render Open Positions Table
+        if (p.open_positions) {
+          const posTbody = document.getElementById('positions-table-body');
+          const countBadge = document.getElementById('pos-count-badge');
+          if (countBadge) countBadge.textContent = `${p.open_positions.length} ACTIVE`;
+          if (posTbody) {
+            posTbody.innerHTML = '';
+            p.open_positions.forEach(pos => {
+              const tr = document.createElement('tr');
+              tr.className = 'border-b border-hairline hover:bg-surface-2';
+              const isBuy = pos.direction === 'BUY';
+              const isPnlPositive = pos.unrealized_pnl >= 0;
+              let slTpHtml = [];
+              if (pos.take_profit) {
+                const tpVal = pos.take_profit.toFixed(pos.symbol === 'EURUSD' ? 4 : 2);
+                const tpPts = pos.take_profit_points ? `+${pos.take_profit_points}pt` : '';
+                slTpHtml.push(`<span class="px-1 py-0.2 bg-green-alpha/20 text-green-alpha border border-green-alpha/40 text-[9px] font-bold">TP ${tpVal} ${tpPts}</span>`);
+              }
+              if (pos.trailing_active) {
+                const slVal = pos.stop_loss ? pos.stop_loss.toFixed(pos.symbol === 'EURUSD' ? 4 : 2) : 'ACTV';
+                slTpHtml.push(`<span class="px-1 py-0.2 bg-amber-tactical/20 text-amber-tactical border border-amber-tactical/40 text-[9px] font-bold">TRAIL ${slVal}</span>`);
+              } else if (pos.stop_loss) {
+                slTpHtml.push(`<span class="text-text-std text-[9px]">SL ${pos.stop_loss.toFixed(pos.symbol === 'EURUSD' ? 4 : 2)}</span>`);
+              }
+              const cellHtml = slTpHtml.length > 0 ? slTpHtml.join(' ') : '<span class="text-text-muted">-</span>';
+              tr.innerHTML = `
+                <td class="py-1.5 font-bold text-text-bright">${pos.symbol}</td>
+                <td class="py-1.5 ${isBuy ? 'text-green-alpha' : 'text-red-risk'} font-bold">${pos.direction}</td>
+                <td class="py-1.5">${pos.lot_size.toFixed(2)}</td>
+                <td class="py-1.5">${cellHtml}</td>
+                <td class="py-1.5 text-right ${isPnlPositive ? 'text-green-alpha' : 'text-red-risk'} font-bold">
+                  ${isPnlPositive ? '+' : ''}$${pos.unrealized_pnl.toLocaleString('en-US', {minimumFractionDigits: 2})}
+                </td>
+              `;
+              posTbody.appendChild(tr);
+            });
+          }
+        }
+      }
+
+      // 2.5 Pending Limit Orders
+      if (payload.pending_orders) {
+        const pendingCountBadge = document.getElementById('pending-count-badge');
+        const pendingTbody = document.getElementById('pending-orders-table-body');
+        if (pendingCountBadge) pendingCountBadge.textContent = `${payload.pending_orders.length} PENDING`;
+        if (pendingTbody) {
+          if (payload.pending_orders.length === 0) {
+            pendingTbody.innerHTML = '<tr><td colspan="5" class="py-2 text-center text-text-muted text-[10px]">No pending limit orders active</td></tr>';
+          } else {
+            pendingTbody.innerHTML = '';
+            payload.pending_orders.forEach(order => {
+              const tr = document.createElement('tr');
+              tr.className = 'border-b border-hairline hover:bg-surface-2';
+              const isBuy = order.direction === 'BUY';
+              let lmtTpHtml = '';
+              if (order.take_profit) {
+                const tpVal = order.take_profit.toFixed(order.symbol === 'EURUSD' ? 4 : 2);
+                const tpPts = order.take_profit_points ? `+${order.take_profit_points}pt` : '';
+                lmtTpHtml = `<div class="text-[9px] text-green-alpha font-mono font-bold">TP ${tpVal} ${tpPts}</div>`;
+              }
+              const orderLot = order.lot_size !== undefined ? Number(order.lot_size).toFixed(2) : '0.10';
+              tr.innerHTML = `
+                <td class="py-1.5 font-bold text-text-bright">${order.symbol}</td>
+                <td class="py-1.5 ${isBuy ? 'text-green-alpha' : 'text-red-risk'} font-bold">${order.order_type}</td>
+                <td class="py-1.5 font-mono text-cyan-glow font-semibold">${orderLot}</td>
+                <td class="py-1.5 text-cyan-glow font-bold">
+                  ${order.limit_price.toFixed(order.symbol === 'EURUSD' ? 4 : 2)}
+                  ${lmtTpHtml}
+                </td>
+                <td class="py-1.5 text-right">
+                  <button onclick="cancelPendingOrder('${order.order_id}')" class="px-1.5 py-0.5 bg-red-risk/20 text-red-risk border border-red-risk/40 hover:bg-red-risk hover:text-void text-[9px] font-bold uppercase transition-colors">Cancel</button>
+                </td>
+              `;
+              pendingTbody.appendChild(tr);
+            });
+          }
+        }
+      }
+
+      // 3. Ticks
+      if (payload.ticks) {
+        for (const [sym, tick] of Object.entries(payload.ticks)) {
+          const lower = sym.toLowerCase();
+          const pEl = document.getElementById(`tick-${lower}-price`);
+          const cEl = document.getElementById(`tick-${lower}-change`);
+          if (pEl) pEl.textContent = tick.price.toFixed(sym === 'EURUSD' ? 4 : 2);
+          if (cEl) {
+            const isUp = tick.change_pct >= 0;
+            cEl.textContent = `${isUp ? '+' : ''}${tick.change_pct.toFixed(2)}% ${isUp ? '▲' : '▼'}`;
+            cEl.className = isUp ? 'text-green-alpha' : 'text-red-risk';
+          }
+        }
+      }
+
+      // 4. Consensus & Pipeline
+      if (payload.consensus) {
+        const c = payload.consensus;
+        const pct = (c.score * 100).toFixed(1);
+        const dir = c.direction;
+        const scoreEl = document.getElementById('svg-consensus-score');
+        if (scoreEl) scoreEl.textContent = `${pct}% ${dir}`;
+        const pipeEl = document.getElementById('pipeline-consensus');
+        if (pipeEl) pipeEl.textContent = `3. Consensus (${pct}% ${dir})`;
+        const barText = document.getElementById('consensus-bar-text');
+        if (barText) barText.textContent = `${pct}% ${dir} (${c.state})`;
+        const fillEl = document.getElementById('consensus-fill');
+        if (fillEl) {
+          fillEl.style.width = `${pct}%`;
+          fillEl.className = dir === 'BUY' ? 'h-full bg-green-alpha transition-all duration-300' : 'h-full bg-red-risk transition-all duration-300';
+        }
+      }
+
+      // 5. Risk Gate Telemetry
+      if (payload.risk_gate) {
+        const rg = payload.risk_gate;
+        const riskLog = document.getElementById('risk-evaluations-log');
+        if (riskLog) {
+          const item = document.createElement('div');
+          item.className = rg.approved 
+            ? 'p-1 bg-surface-2 border border-green-alpha/30 text-green-alpha'
+            : 'p-1 bg-surface-2 border border-red-risk/30 text-red-risk';
+          item.textContent = `[${rg.approved ? 'APPROVED' : 'BLOCKED'}] ${rg.symbol} ${rg.direction} lot:${rg.lot_size.toFixed(2)} (${rg.reasons.join(', ')})`;
+          riskLog.prepend(item);
+          if (riskLog.children.length > 8) riskLog.removeChild(riskLog.lastChild);
+        }
+      }
+
+      // 6. Agent Matrix
+      if (payload.agents) {
+        const grid = document.getElementById('agent-matrix-grid');
+        if (grid) {
+          grid.innerHTML = '';
+          for (const [id, a] of Object.entries(payload.agents)) {
+            const card = document.createElement('div');
+            card.className = 'bg-surface-1 border border-hairline p-3 flex flex-col justify-between font-mono text-[10px]';
+            card.innerHTML = `
+              <div>
+                <div class="flex items-center justify-between border-b border-hairline pb-1.5 mb-1.5">
+                  <span class="font-bold text-cyan-glow text-[11px]">${a.agent_id}</span>
+                  <span class="px-1 py-0.2 bg-surface-2 text-green-alpha border border-green-alpha/30 text-[9px]">${a.status}</span>
+                </div>
+                <div class="text-text-muted text-[10px] mb-2">${a.role}</div>
+                <div class="flex justify-between py-0.5 border-b border-hairline">
+                  <span class="text-text-std">Weight:</span>
+                  <span class="text-text-bright font-bold">${a.weight}x</span>
+                </div>
+                <div class="flex justify-between py-0.5 border-b border-hairline">
+                  <span class="text-text-std">Reliability:</span>
+                  <span class="text-green-alpha font-bold">${(a.reliability * 100).toFixed(0)}%</span>
+                </div>
+                <div class="flex justify-between py-0.5">
+                  <span class="text-text-std">Latency:</span>
+                  <span class="text-cyan-glow font-bold">${a.latency_ms}ms</span>
+                </div>
+              </div>
+              <div class="mt-2 pt-1 border-t border-hairline text-text-muted text-[9px]">
+                Protocol: <span class="text-cyan-glow font-mono">AICL v1.0</span>
+              </div>
+            `;
+            grid.appendChild(card);
+          }
+        }
+      }
+
+      // 7. Audit Trail
+      if (payload.recent_audit) {
+        const tbody = document.getElementById('audit-table-body');
+        if (tbody) {
+          tbody.innerHTML = '';
+          payload.recent_audit.slice().reverse().forEach(r => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-hairline hover:bg-surface-2';
+            tr.innerHTML = `
+              <td class="py-1 text-text-muted">${r.index}</td>
+              <td class="py-1 text-cyan-glow">${r.timestamp}</td>
+              <td class="py-1 font-bold text-text-bright">${r.source}</td>
+              <td class="py-1 text-green-alpha">${r.event_type}</td>
+              <td class="py-1 text-text-bright">${r.message}</td>
+              <td class="py-1 text-right font-mono text-text-muted text-[9px]">${r.hash.substring(0, 16)}...</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      }
+    }
+
+    // Startup
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchInitialState();
+      initWebSocket();
+      setInterval(() => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          fetchInitialState();
+        }
+      }, 2000);
+    });
+  </script>
+</body>
+</html>
