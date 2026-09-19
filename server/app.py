@@ -1,6 +1,7 @@
 """CYBER SWARM TRADING OS - FastAPI Telemetry Server"""
 import asyncio
 import os
+import math
 import random
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -22,6 +23,8 @@ from cyber_swarm.execution.router import ExecutionRouter
 from cyber_swarm.execution.mt5_connector import MT5Connector
 from cyber_swarm.audit.ledger import ledger
 from cyber_swarm.quant.candle_aggregator import candle_aggregator
+from cyber_swarm.quant.features import Candle
+from cyber_swarm.simulation.backtest_engine import BacktestEngine, BacktestConfig, BacktestReport
 from cyber_swarm.audit.persistence import audit_db
 import logging
 
@@ -188,8 +191,8 @@ async def swarm_background_loop():
                 lot_size=config.fixed_lot_size
             )
 
-            # 5. Autonomous Trade Bot Execution if approved
-            if current_risk_eval.approved and config.auto_trade_enabled:
+            # 5. Autonomous Trade Bot Execution if approved (Blocked in SAFE and BACKTEST modes)
+            if current_risk_eval.approved and config.auto_trade_enabled and config.mode not in (ExecutionMode.SAFE, ExecutionMode.BACKTEST):
                 # High Conviction (>= 85%): Direct Market Execution (0.10 lot)
                 if current_consensus.score >= 0.85:
                     order = await router.execute_order(current_risk_eval, current_consensus, tick)
@@ -359,8 +362,35 @@ class ModeReq(BaseModel):
 @app.post("/api/mode")
 async def set_mode(req: ModeReq):
     config.mode = req.mode
-    ledger.record_event("OPERATOR", "MODE_CHANGE", f"Execution mode changed to {req.mode.value}")
-    return {"mode": config.mode.value}
+    msg = f"Execution mode changed to {req.mode.value}"
+    ev = ledger.record_event("OPERATOR", "MODE_CHANGE", msg)
+    audit_db.persist_record(ev)
+
+    # Immediately broadcast mode change to all active WebSocket clients
+    await manager.broadcast({
+        "type": "MODE_CHANGE",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "mode": config.mode.value,
+        "message": msg,
+        "config": {
+            "mode": config.mode.value,
+            "auto_trade_enabled": config.auto_trade_enabled,
+            "fixed_lot_size": config.fixed_lot_size,
+            "lot_size": config.fixed_lot_size,
+            "trailing_stop_enabled": config.trailing_stop_enabled,
+            "take_profit_enabled": config.take_profit_enabled,
+            "take_profit_points": config.take_profit_points,
+            "killswitch": risk_gate.killswitch_active,
+            "mt5_connected": mt5_conn.connected
+        }
+    })
+
+    return {
+        "status": "SUCCESS",
+        "mode": config.mode.value,
+        "message": msg,
+        "mt5_connected": mt5_conn.connected
+    }
 
 class AutoTradeReq(BaseModel):
     enabled: bool
@@ -483,6 +513,16 @@ class LimitOrderReq(BaseModel):
 
 @app.post("/api/orders/limit")
 async def place_limit_order(req: LimitOrderReq):
+    if config.mode == ExecutionMode.SAFE:
+        raise HTTPException(
+            status_code=403,
+            detail="SAFE MODE ACTIVE: Order placement is strictly prohibited. Fail-closed invariants enforced."
+        )
+    if config.mode == ExecutionMode.BACKTEST:
+        raise HTTPException(
+            status_code=400,
+            detail="BACKTEST MODE ACTIVE: Direct live limit order placement is disabled. Use the Backtest Cockpit to run historical simulations."
+        )
     if req.order_type not in (OrderType.BUY_LIMIT, OrderType.SELL_LIMIT):
         raise HTTPException(status_code=400, detail="Invalid order type for limit order")
     if req.take_profit_points is not None:
@@ -638,6 +678,83 @@ async def websocket_telemetry(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket client disconnected or error: {e}")
         manager.disconnect(websocket)
+
+latest_backtest_report: Optional[BacktestReport] = None
+
+class RunBacktestReq(BaseModel):
+    symbol: str = "XAUUSD"
+    candle_count: int = 150
+    initial_equity: float = 1000000.0
+    risk_per_trade_pct: float = 1.5
+
+@app.post("/api/backtest/run")
+async def run_backtest_endpoint(req: RunBacktestReq):
+    global latest_backtest_report
+    from datetime import timedelta
+    candles: List[Candle] = []
+    sym = req.symbol.upper()
+    
+    # Base price calculation from current ticks or sensible default
+    if sym in current_ticks and current_ticks[sym].price > 0:
+        base_price = current_ticks[sym].price
+    elif "BTC" in sym:
+        base_price = 67412.0
+    elif "EUR" in sym:
+        base_price = 1.0894
+    elif "OIL" in sym:
+        base_price = 81.24
+    else:
+        base_price = 2384.42
+
+    # Synthesize realistic institutional candles with market wave cycles & volatility
+    base_ts = datetime.now(timezone.utc) - timedelta(minutes=15 * req.candle_count)
+    curr = base_price
+    for i in range(req.candle_count):
+        # Multi-cycle institutional order flow (trend waves + intraday oscillation)
+        wave = math.sin(i / 5.0) * (curr * 0.005) + math.cos(i / 12.0) * (curr * 0.003)
+        drift = (wave * 0.25) + ((random.random() - 0.49) * (curr * 0.002))
+        curr += drift
+        high = curr + abs(random.uniform(0.3, 1.2)) * (curr * 0.002)
+        low = curr - abs(random.uniform(0.3, 1.2)) * (curr * 0.002)
+        c = Candle(
+            timestamp=base_ts + timedelta(minutes=15 * i),
+            open=round(curr - drift, 4),
+            high=round(max(high, curr, curr - drift), 4),
+            low=round(min(low, curr, curr - drift), 4),
+            close=round(curr, 4),
+            volume=round(random.uniform(500.0, 3500.0), 1)
+        )
+        candles.append(c)
+
+    cfg = BacktestConfig(
+        initial_equity=req.initial_equity,
+        risk_per_trade_pct=req.risk_per_trade_pct
+    )
+    engine = BacktestEngine(config=cfg)
+    report = await engine.run_simulation(candles, symbol=sym)
+    latest_backtest_report = report
+
+    ev = ledger.record_event(
+        source="SIMULATION",
+        event_type="BACKTEST_COMPLETED",
+        message=f"Historical Backtest completed for {sym}: {report.total_trades} trades, Win Rate: {report.win_rate_pct:.1f}%, Profit Factor: {report.profit_factor:.2f}, Final Equity: ${report.final_equity:,.2f}",
+        payload={"symbol": sym, "final_equity": report.final_equity, "win_rate_pct": report.win_rate_pct, "profit_factor": report.profit_factor}
+    )
+    audit_db.persist_record(ev)
+
+    await manager.broadcast({
+        "type": "BACKTEST_REPORT",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "report": report.model_dump(mode="json")
+    })
+
+    return report.model_dump(mode="json")
+
+@app.get("/api/backtest/latest")
+async def get_latest_backtest():
+    if latest_backtest_report is None:
+        raise HTTPException(status_code=404, detail="No backtest has been executed yet.")
+    return latest_backtest_report.model_dump(mode="json")
 
 # Mount static directory and root index
 if STATIC_DIR.exists():

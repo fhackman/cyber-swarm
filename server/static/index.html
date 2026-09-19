@@ -129,16 +129,19 @@
       <button onclick="switchTab('audit')" id="tab-btn-audit" class="h-full px-4 flex items-center border-b-2 border-transparent text-text-std hover:text-text-bright hover:bg-surface-1">
         Execution & Audit Log
       </button>
+      <button onclick="switchTab('backtest')" id="tab-btn-backtest" class="h-full px-4 flex items-center border-b-2 border-transparent text-text-std hover:text-text-bright hover:bg-surface-1">
+        Backtest Cockpit
+      </button>
     </nav>
 
     <!-- Operational Controls -->
     <div class="flex items-center gap-3">
       <!-- Mode Badges -->
-      <div class="hidden sm:flex items-center bg-surface-1 border border-hairline p-0.5 font-mono text-[10px]">
-        <button onclick="setExecutionMode('LIVE')" id="mode-btn-live" class="px-2 py-0.5 text-text-muted hover:text-text-bright">LIVE</button>
-        <button onclick="setExecutionMode('PAPER')" id="mode-btn-paper" class="px-2 py-0.5 bg-surface-3 text-cyan-glow border border-cyan-glow/50 font-bold">PAPER</button>
-        <button onclick="setExecutionMode('BACKTEST')" id="mode-btn-backtest" class="px-2 py-0.5 text-text-muted hover:text-text-bright">BACKTEST</button>
-        <button onclick="setExecutionMode('SAFE')" id="mode-btn-safe" class="px-2 py-0.5 text-text-muted hover:text-text-bright">SAFE</button>
+      <div class="hidden sm:flex items-center bg-surface-1 border border-hairline p-0.5 font-mono text-[10px]" title="Operational Execution Mode Selection">
+        <button onclick="setExecutionMode('LIVE')" id="mode-btn-live" title="Switch to Real MT5 Live Execution" class="px-2 py-0.5 text-text-muted hover:text-text-bright transition-colors">LIVE</button>
+        <button onclick="setExecutionMode('PAPER')" id="mode-btn-paper" title="Switch to Simulated Paper Trading" class="px-2 py-0.5 bg-surface-3 text-cyan-glow border border-cyan-glow/50 font-bold transition-colors">PAPER</button>
+        <button onclick="setExecutionMode('BACKTEST')" id="mode-btn-backtest" title="Switch to Historical Simulation & Replay" class="px-2 py-0.5 text-text-muted hover:text-text-bright transition-colors">BACKTEST</button>
+        <button onclick="setExecutionMode('SAFE')" id="mode-btn-safe" title="Engage Fail-Closed Safe Mode (Halt All Trading)" class="px-2 py-0.5 text-text-muted hover:text-text-bright transition-colors">SAFE</button>
       </div>
 
       <!-- Auto Trade Bot Master Switch -->
@@ -239,6 +242,31 @@
   <!-- MAIN VIEWPORT CONTAINER -->
   <main class="pt-[90px] p-4 min-h-screen">
     
+    <!-- GLOBAL OPERATIONAL MODE STATUS BANNER -->
+    <div id="mode-status-banner" class="mb-3 p-2.5 bg-surface-1 border border-cyan-glow/40 flex flex-wrap items-center justify-between gap-3 font-mono text-xs transition-all duration-300">
+      <div class="flex items-center gap-3">
+        <span id="mode-banner-badge" class="px-2 py-0.5 bg-surface-3 text-cyan-glow border border-cyan-glow font-bold tracking-wider flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-cyan-glow inline-block animate-pulse" id="mode-banner-dot"></span>
+          <span id="mode-banner-title">PAPER SIMULATION MODE</span>
+        </span>
+        <span id="mode-banner-desc" class="text-text-std text-[11px]">
+          Live AI deliberation pipeline with zero capital risk. All orders filled in paper memory ledger.
+        </span>
+      </div>
+      <div class="flex items-center gap-3 text-[11px]">
+        <div id="mode-broker-status" class="flex items-center gap-1.5 text-text-muted">
+          <span class="material-symbols-outlined text-[13px] text-cyan-glow">shield</span>
+          <span id="mode-broker-text">MT5 BRIDGE: OFFLINE (SIMULATED FILL)</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button onclick="setExecutionMode('LIVE')" class="px-1.5 py-0.5 bg-surface-2 hover:bg-red-risk hover:text-white text-text-muted border border-hairline text-[10px] transition-colors">LIVE</button>
+          <button onclick="setExecutionMode('PAPER')" class="px-1.5 py-0.5 bg-surface-2 hover:bg-cyan-glow hover:text-void text-text-muted border border-hairline text-[10px] transition-colors">PAPER</button>
+          <button onclick="setExecutionMode('BACKTEST')" class="px-1.5 py-0.5 bg-surface-2 hover:bg-purple-500 hover:text-white text-text-muted border border-hairline text-[10px] transition-colors">BACKTEST</button>
+          <button onclick="setExecutionMode('SAFE')" class="px-1.5 py-0.5 bg-surface-2 hover:bg-amber-tactical hover:text-void text-text-muted border border-hairline text-[10px] transition-colors">SAFE</button>
+        </div>
+      </div>
+    </div>
+
     <!-- TOP KPI ROW -->
     <section class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2 mb-3">
       <!-- KPI 1: Net Equity -->
@@ -695,7 +723,7 @@
                 <option value="BUY_LIMIT">BUY LIMIT</option>
                 <option value="SELL_LIMIT">SELL LIMIT</option>
               </select>
-              <button onclick="submitManualLimitOrder()" class="px-2 py-0.5 bg-cyan-glow text-void font-bold hover:bg-white transition-colors">SEND</button>
+              <button onclick="submitManualLimitOrder()" id="manual-limit-submit-btn" class="px-2 py-0.5 bg-cyan-glow text-void font-bold hover:bg-white transition-colors">SEND</button>
             </div>
           </div>
         </div>
@@ -854,7 +882,132 @@
       </div>
     </div>
 
+    <!-- VIEW 5: BACKTEST SIMULATION COCKPIT -->
+    <div id="view-backtest" class="hidden flex flex-col gap-3">
+      <!-- Backtest Setup & Parameters Header -->
+      <div class="bg-surface-1 border border-hairline p-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="font-headline font-bold text-sm uppercase tracking-wider text-cyan-glow flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">history_edu</span>
+            <span>Historical Swarm Backtest & Quant Simulation Engine</span>
+          </h2>
+          <span class="font-mono text-[10px] text-text-muted">MULTI-AGENT DELIBERATION REPLAY & QUANTITATIVE SMC INVARIANT AUDIT</span>
+        </div>
+        <div class="flex items-center flex-wrap gap-2 font-mono text-xs">
+          <!-- Asset Selector -->
+          <div class="flex items-center gap-1 bg-surface-2 border border-hairline px-2 py-1">
+            <span class="text-text-muted text-[10px]">SYMBOL:</span>
+            <select id="backtest-symbol" class="bg-transparent text-cyan-glow font-bold focus:outline-none cursor-pointer">
+              <option value="XAUUSD" class="bg-void text-text-bright">XAUUSD (Gold)</option>
+              <option value="BTCUSD" class="bg-void text-text-bright">BTCUSD (Bitcoin)</option>
+              <option value="EURUSD" class="bg-void text-text-bright">EURUSD (Euro)</option>
+              <option value="USOIL" class="bg-void text-text-bright">USOIL (Crude)</option>
+            </select>
+          </div>
+          <!-- Bars Count -->
+          <div class="flex items-center gap-1 bg-surface-2 border border-hairline px-2 py-1">
+            <span class="text-text-muted text-[10px]">CANDLES:</span>
+            <select id="backtest-candles" class="bg-transparent text-cyan-glow font-bold focus:outline-none cursor-pointer">
+              <option value="50" class="bg-void text-text-bright">50 Bars (M15)</option>
+              <option value="100" class="bg-void text-text-bright">100 Bars (M15)</option>
+              <option value="200" selected class="bg-void text-text-bright">200 Bars (M15)</option>
+              <option value="500" class="bg-void text-text-bright">500 Bars (M15)</option>
+            </select>
+          </div>
+          <!-- Initial Equity -->
+          <div class="flex items-center gap-1 bg-surface-2 border border-hairline px-2 py-1">
+            <span class="text-text-muted text-[10px]">EQUITY:</span>
+            <select id="backtest-equity" class="bg-transparent text-cyan-glow font-bold focus:outline-none cursor-pointer">
+              <option value="500000" class="bg-void text-text-bright">$500,000</option>
+              <option value="1000000" selected class="bg-void text-text-bright">$1,000,000</option>
+              <option value="2000000" class="bg-void text-text-bright">$2,000,000</option>
+            </select>
+          </div>
+          <!-- Risk Per Trade -->
+          <div class="flex items-center gap-1 bg-surface-2 border border-hairline px-2 py-1">
+            <span class="text-text-muted text-[10px]">RISK/TRADE:</span>
+            <select id="backtest-risk" class="bg-transparent text-cyan-glow font-bold focus:outline-none cursor-pointer">
+              <option value="1.0" class="bg-void text-text-bright">1.0%</option>
+              <option value="1.5" selected class="bg-void text-text-bright">1.5%</option>
+              <option value="2.0" class="bg-void text-text-bright">2.0%</option>
+            </select>
+          </div>
+          <!-- Run Button -->
+          <button onclick="runBacktestSimulation()" id="run-backtest-btn" class="flex items-center gap-1 px-4 py-1.5 bg-cyan-glow text-void font-bold hover:bg-cyan-glow/80 transition-colors uppercase tracking-wider">
+            <span class="material-symbols-outlined text-[14px]">play_arrow</span>
+            <span>RUN SIMULATION</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Backtest Performance Metric Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div class="bg-surface-1 border border-hairline p-3">
+          <div class="text-text-muted font-mono text-[10px] uppercase">Final Equity</div>
+          <div id="bt-metric-equity" class="font-mono text-base font-bold text-cyan-glow mt-1">$1,000,000.00</div>
+          <div id="bt-metric-return" class="font-mono text-[10px] text-green-alpha mt-0.5">+0.00% Return</div>
+        </div>
+        <div class="bg-surface-1 border border-hairline p-3">
+          <div class="text-text-muted font-mono text-[10px] uppercase">Win Rate %</div>
+          <div id="bt-metric-winrate" class="font-mono text-base font-bold text-green-alpha mt-1">--%</div>
+          <div id="bt-metric-wins-losses" class="font-mono text-[10px] text-text-muted mt-0.5">0 W / 0 L</div>
+        </div>
+        <div class="bg-surface-1 border border-hairline p-3">
+          <div class="text-text-muted font-mono text-[10px] uppercase">Profit Factor</div>
+          <div id="bt-metric-pf" class="font-mono text-base font-bold text-cyan-glow mt-1">--</div>
+          <div id="bt-metric-gross" class="font-mono text-[10px] text-text-muted mt-0.5">Gross: $0 / $0</div>
+        </div>
+        <div class="bg-surface-1 border border-hairline p-3">
+          <div class="text-text-muted font-mono text-[10px] uppercase">Max Drawdown</div>
+          <div id="bt-metric-dd" class="font-mono text-base font-bold text-amber-tactical mt-1">--%</div>
+          <div class="font-mono text-[10px] text-text-muted mt-0.5">Peak-to-Valley</div>
+        </div>
+        <div class="bg-surface-1 border border-hairline p-3">
+          <div class="text-text-muted font-mono text-[10px] uppercase">Sharpe / Sortino</div>
+          <div id="bt-metric-sharpe" class="font-mono text-base font-bold text-text-bright mt-1">-- / --</div>
+          <div class="font-mono text-[10px] text-text-muted mt-0.5">Risk-Adjusted</div>
+        </div>
+        <div class="bg-surface-1 border border-hairline p-3">
+          <div class="text-text-muted font-mono text-[10px] uppercase">Total Executions</div>
+          <div id="bt-metric-trades" class="font-mono text-base font-bold text-text-bright mt-1">0 TRADES</div>
+          <div id="bt-metric-symbol" class="font-mono text-[10px] text-cyan-glow mt-0.5">XAUUSD M15</div>
+        </div>
+      </div>
+
+      <!-- Trade Log Table -->
+      <div class="bg-surface-1 border border-hairline p-3">
+        <div class="flex items-center justify-between pb-2 border-b border-hairline mb-2">
+          <div class="font-mono text-xs font-bold text-text-bright uppercase">Simulation Fill Log & Trade Timeline</div>
+          <span id="bt-trade-count-badge" class="px-2 py-0.5 bg-surface-2 text-cyan-glow font-mono text-[10px] border border-cyan-glow/30">0 TRADES</span>
+        </div>
+        <div class="overflow-x-auto max-h-[400px]">
+          <table class="w-full text-left font-mono text-[11px]">
+            <thead class="sticky top-0 bg-surface-1">
+              <tr class="text-text-muted border-b border-hairline">
+                <th class="py-1">TRADE ID</th>
+                <th class="py-1">SYMBOL</th>
+                <th class="py-1">SIDE</th>
+                <th class="py-1 text-right">ENTRY</th>
+                <th class="py-1 text-right">EXIT</th>
+                <th class="py-1 text-right">LOT</th>
+                <th class="py-1 text-right">NET P&L</th>
+                <th class="py-1 text-right">R-MULTIPLE</th>
+              </tr>
+            </thead>
+            <tbody id="bt-trades-body" class="divide-y divide-hairline text-text-bright">
+              <tr>
+                <td colspan="8" class="py-4 text-center text-text-muted">No simulation executed yet. Click "RUN SIMULATION" above to test Swarm performance on historical candles.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </main>
+
+  <!-- CYBERPUNK HUD TOAST CONTAINER -->
+  <div id="hud-toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
 
   <!-- CLIENT-SIDE CONTROLLER & WEBSOCKET CLIENT -->
   <script>
@@ -862,15 +1015,17 @@
     let isKillswitchActive = false;
     let activeTab = 'overview';
 
+    let currentExecutionMode = 'PAPER';
+
     function switchTab(tabName) {
       activeTab = tabName;
-      ['overview', 'matrix', 'risk', 'audit'].forEach(t => {
+      ['overview', 'matrix', 'risk', 'audit', 'backtest'].forEach(t => {
         const viewEl = document.getElementById(`view-${t}`);
         const btnEl = document.getElementById(`tab-btn-${t}`);
         if (viewEl && btnEl) {
           if (t === tabName) {
             viewEl.classList.remove('hidden');
-            btnEl.className = 'h-full px-4 flex items-center border-b-2 border-cyan-glow text-cyan-glow bg-surface-2';
+            btnEl.className = 'h-full px-4 flex items-center border-b-2 border-cyan-glow text-cyan-glow bg-surface-2 font-bold';
           } else {
             viewEl.classList.add('hidden');
             btnEl.className = 'h-full px-4 flex items-center border-b-2 border-transparent text-text-std hover:text-text-bright hover:bg-surface-1';
@@ -879,7 +1034,101 @@
       });
     }
 
+    // Web Audio Synthesizer for instant Cyberpunk acoustic feedback
+    function playModeChime(mode) {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (mode === 'LIVE') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } else if (mode === 'SAFE') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.setValueAtTime(160, now + 0.1);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else if (mode === 'BACKTEST') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(780, now + 0.12);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } else {
+          // PAPER
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(660, now);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        }
+      } catch (e) {
+        // Ignore audio restrictions prior to user gesture
+      }
+    }
+
+    function showHudToast(title, message, type = 'info') {
+      const container = document.getElementById('hud-toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      const borderColor = type === 'danger' ? 'border-red-risk' : (type === 'warning' ? 'border-amber-tactical' : (type === 'purple' ? 'border-purple-400' : 'border-cyan-glow'));
+      const textColor = type === 'danger' ? 'text-red-risk' : (type === 'warning' ? 'text-amber-tactical' : (type === 'purple' ? 'text-purple-400' : 'text-cyan-glow'));
+      const bgOpacity = type === 'danger' ? 'bg-red-risk/20' : (type === 'warning' ? 'bg-amber-tactical/20' : (type === 'purple' ? 'bg-purple-950/80' : 'bg-surface-1/95'));
+
+      toast.className = `pointer-events-auto p-3 ${bgOpacity} border ${borderColor} backdrop-blur-md shadow-2xl font-mono text-xs flex flex-col gap-1 transition-all duration-300 transform translate-y-2 opacity-0`;
+      toast.innerHTML = `
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-1.5 font-bold ${textColor}">
+            <span class="w-2 h-2 rounded-full ${type === 'danger' ? 'bg-red-risk' : (type === 'warning' ? 'bg-amber-tactical' : 'bg-cyan-glow')} animate-pulse"></span>
+            <span class="tracking-wider uppercase text-[11px]">${title}</span>
+          </div>
+          <span class="text-[9px] text-text-muted">${new Date().toLocaleTimeString()}</span>
+        </div>
+        <div class="text-[11px] text-text-bright mt-0.5">${message}</div>
+      `;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-x-4');
+        setTimeout(() => toast.remove(), 350);
+      }, 4500);
+    }
+
     async function setExecutionMode(mode) {
+      if (mode === 'LIVE' && currentExecutionMode !== 'LIVE') {
+        const confirmed = confirm(
+          "⚠ CONFIRM REAL MT5 LIVE EXECUTION ⚠\n\n" +
+          "You are engaging LIVE mode.\n" +
+          "High-conviction swarm signals and manual orders will route directly to your MetaTrader 5 terminal.\n\n" +
+          "Do you wish to proceed?"
+        );
+        if (!confirmed) return;
+      }
+
+      // 1. Immediate optimistic UI and acoustic feedback
+      updateModeUI(mode);
+      playModeChime(mode);
+
+      // 2. Transmit to server
       try {
         const resp = await fetch('/api/mode', {
           method: 'POST',
@@ -887,21 +1136,230 @@
           body: JSON.stringify({mode: mode})
         });
         const data = await resp.json();
-        updateModeButtons(data.mode);
+        updateModeUI(data.mode);
+
+        if (data.mode === 'LIVE') {
+          showHudToast("LIVE MODE ACTIVE", data.mt5_connected ? "Connected to MT5 broker. Real orders routing active." : "MT5 Bridge is currently OFFLINE. Connect MT5 to route orders.", "danger");
+        } else if (data.mode === 'SAFE') {
+          showHudToast("FAIL-CLOSED SAFE MODE", "All trade execution blocked across all desks.", "warning");
+        } else if (data.mode === 'BACKTEST') {
+          showHudToast("BACKTEST COCKPIT LOADED", "Historical simulation engine ready. Replaying M15 bars.", "purple");
+          switchTab('backtest');
+        } else {
+          showHudToast("PAPER TRADING ACTIVE", "Zero-risk simulation feed with real-time Swarm consensus.", "info");
+        }
       } catch (err) {
         console.error("Failed to set mode:", err);
+        showHudToast("NETWORK ERROR", "Failed to communicate mode change to backend server.", "danger");
+      }
+    }
+
+    function updateModeUI(mode) {
+      currentExecutionMode = mode;
+
+      // 1. Header Mode Buttons
+      ['LIVE', 'PAPER', 'BACKTEST', 'SAFE'].forEach(m => {
+        const btn = document.getElementById(`mode-btn-${m.toLowerCase()}`);
+        if (!btn) return;
+        if (m === mode) {
+          if (m === 'LIVE') {
+            btn.className = 'px-2 py-0.5 bg-red-risk/30 text-red-risk border border-red-risk font-bold animate-pulse';
+          } else if (m === 'SAFE') {
+            btn.className = 'px-2 py-0.5 bg-amber-tactical/30 text-amber-tactical border border-amber-tactical font-bold';
+          } else if (m === 'BACKTEST') {
+            btn.className = 'px-2 py-0.5 bg-purple-900/40 text-purple-300 border border-purple-400 font-bold';
+          } else {
+            btn.className = 'px-2 py-0.5 bg-surface-3 text-cyan-glow border border-cyan-glow/50 font-bold';
+          }
+        } else {
+          btn.className = 'px-2 py-0.5 text-text-muted hover:text-text-bright transition-colors';
+        }
+      });
+
+      // 2. Global Mode Status Banner
+      const banner = document.getElementById('mode-status-banner');
+      const badge = document.getElementById('mode-banner-badge');
+      const dot = document.getElementById('mode-banner-dot');
+      const title = document.getElementById('mode-banner-title');
+      const desc = document.getElementById('mode-banner-desc');
+      const headerConn = document.getElementById('header-connection');
+
+      if (banner && badge && title && desc) {
+        if (mode === 'LIVE') {
+          banner.className = 'mb-3 p-2.5 bg-red-risk/10 border border-red-risk flex flex-wrap items-center justify-between gap-3 font-mono text-xs transition-all duration-300 shadow-[0_0_15px_rgba(255,59,105,0.2)]';
+          badge.className = 'px-2 py-0.5 bg-red-risk text-void font-bold tracking-wider flex items-center gap-1.5 animate-pulse';
+          dot.className = 'w-2 h-2 rounded-full bg-white inline-block';
+          title.textContent = 'LIVE BROKER EXECUTION ACTIVE';
+          desc.textContent = 'High-conviction consensus executes directly on MetaTrader 5 broker terminal. Strict risk invariants enforced.';
+          if (headerConn) {
+            headerConn.textContent = 'LIVE MT5 BROKER';
+            headerConn.className = 'text-red-risk font-bold animate-pulse';
+          }
+        } else if (mode === 'SAFE') {
+          banner.className = 'mb-3 p-2.5 bg-amber-tactical/15 border border-amber-tactical flex flex-wrap items-center justify-between gap-3 font-mono text-xs transition-all duration-300 shadow-[0_0_15px_rgba(255,184,0,0.2)]';
+          badge.className = 'px-2 py-0.5 bg-amber-tactical text-void font-bold tracking-wider flex items-center gap-1.5';
+          dot.className = 'w-2 h-2 rounded-full bg-void inline-block';
+          title.textContent = 'FAIL-CLOSED SAFE MODE ACTIVE';
+          desc.textContent = 'All autonomous and manual trade execution is strictly prohibited. Portfolio risk invariants locked.';
+          if (headerConn) {
+            headerConn.textContent = 'SAFE MODE [HALTED]';
+            headerConn.className = 'text-amber-tactical font-bold';
+          }
+        } else if (mode === 'BACKTEST') {
+          banner.className = 'mb-3 p-2.5 bg-purple-950/40 border border-purple-400/50 flex flex-wrap items-center justify-between gap-3 font-mono text-xs transition-all duration-300 shadow-[0_0_15px_rgba(168,85,247,0.2)]';
+          badge.className = 'px-2 py-0.5 bg-purple-700 text-white font-bold tracking-wider flex items-center gap-1.5';
+          dot.className = 'w-2 h-2 rounded-full bg-purple-300 inline-block animate-pulse';
+          title.textContent = 'HISTORICAL BACKTEST COCKPIT';
+          desc.textContent = 'Live autonomous execution paused. Test multi-agent swarm consensus on historical M15 candle sequences.';
+          if (headerConn) {
+            headerConn.textContent = 'BACKTEST SIMULATION';
+            headerConn.className = 'text-purple-400 font-bold';
+          }
+        } else {
+          // PAPER
+          banner.className = 'mb-3 p-2.5 bg-surface-1 border border-cyan-glow/40 flex flex-wrap items-center justify-between gap-3 font-mono text-xs transition-all duration-300';
+          badge.className = 'px-2 py-0.5 bg-surface-3 text-cyan-glow border border-cyan-glow font-bold tracking-wider flex items-center gap-1.5';
+          dot.className = 'w-2 h-2 rounded-full bg-cyan-glow inline-block animate-pulse';
+          title.textContent = 'PAPER SIMULATION MODE';
+          desc.textContent = 'Live AI deliberation pipeline with zero capital risk. All orders filled in paper memory ledger.';
+          if (headerConn) {
+            headerConn.textContent = 'PAPER SIMULATOR';
+            headerConn.className = 'text-cyan-glow font-bold';
+          }
+        }
+      }
+
+      // 3. Update Manual Order Controls Disabled/Enabled state
+      const submitBtn = document.getElementById('manual-limit-submit-btn');
+      if (submitBtn) {
+        if (mode === 'SAFE') {
+          submitBtn.disabled = true;
+          submitBtn.className = 'px-2 py-0.5 bg-red-risk/20 border border-red-risk text-red-risk font-mono font-bold text-[10px] cursor-not-allowed opacity-75';
+          submitBtn.textContent = 'LOCKED (SAFE)';
+        } else if (mode === 'BACKTEST') {
+          submitBtn.disabled = true;
+          submitBtn.className = 'px-2 py-0.5 bg-purple-900/40 border border-purple-500 text-purple-300 font-mono font-bold text-[10px] cursor-not-allowed opacity-75';
+          submitBtn.textContent = 'BACKTEST ONLY';
+        } else {
+          submitBtn.disabled = false;
+          submitBtn.className = 'px-2 py-0.5 bg-cyan-glow text-void font-bold hover:bg-white transition-colors';
+          submitBtn.textContent = 'SEND';
+        }
       }
     }
 
     function updateModeButtons(mode) {
-      ['LIVE', 'PAPER', 'BACKTEST', 'SAFE'].forEach(m => {
-        const btn = document.getElementById(`mode-btn-${m.toLowerCase()}`);
-        if (m === mode) {
-          btn.className = 'px-2 py-0.5 bg-surface-3 text-cyan-glow border border-cyan-glow/50 font-bold';
+      updateModeUI(mode);
+    }
+
+    async function runBacktestSimulation() {
+      const sym = document.getElementById('backtest-symbol').value;
+      const count = parseInt(document.getElementById('backtest-candles').value, 10);
+      const equity = parseFloat(document.getElementById('backtest-equity').value);
+      const risk = parseFloat(document.getElementById('backtest-risk').value);
+
+      const btn = document.getElementById('run-backtest-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-[14px] animate-spin">sync</span><span>SIMULATING...</span>';
+      }
+
+      showHudToast("SIMULATION LAUNCHED", `Replaying ${count} candles for ${sym} across Swarm deliberators...`, "purple");
+
+      try {
+        const resp = await fetch('/api/backtest/run', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            symbol: sym,
+            candle_count: count,
+            initial_equity: equity,
+            risk_per_trade_pct: risk
+          })
+        });
+
+        if (resp.ok) {
+          const report = await resp.json();
+          renderBacktestResults(report);
+          playModeChime('backtest');
+          showHudToast("BACKTEST COMPLETE", `${report.total_trades} trades executed. Win Rate: ${report.win_rate_pct.toFixed(1)}%, PnL: ${report.net_profit >= 0 ? '+' : ''}$${report.net_profit.toLocaleString()}`, "purple");
         } else {
-          btn.className = 'px-2 py-0.5 text-text-muted hover:text-text-bright';
+          const err = await resp.json();
+          showHudToast("BACKTEST FAILED", err.detail || "Simulation run failed", "danger");
         }
-      });
+      } catch (err) {
+        console.error("Backtest execution failed:", err);
+        showHudToast("ERROR", "Connection to simulation engine failed", "danger");
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span class="material-symbols-outlined text-[14px]">play_arrow</span><span>RUN SIMULATION</span>';
+        }
+      }
+    }
+
+    function renderBacktestResults(report) {
+      if (!report) return;
+
+      const initialEq = report.initial_equity || (report.final_equity - (report.net_profit || 0)) || 1000000;
+      const retPct = ((report.final_equity - initialEq) / initialEq) * 100;
+      const eqEl = document.getElementById('bt-metric-equity');
+      const retEl = document.getElementById('bt-metric-return');
+      if (eqEl) eqEl.textContent = `$${report.final_equity.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+      if (retEl) {
+        retEl.textContent = `${retPct >= 0 ? '+' : ''}${retPct.toFixed(2)}% Return`;
+        retEl.className = retPct >= 0 ? 'font-mono text-[10px] text-green-alpha mt-0.5' : 'font-mono text-[10px] text-red-risk mt-0.5';
+      }
+
+      const wrEl = document.getElementById('bt-metric-winrate');
+      const wlEl = document.getElementById('bt-metric-wins-losses');
+      if (wrEl) wrEl.textContent = `${report.win_rate_pct.toFixed(1)}%`;
+      if (wlEl) wlEl.textContent = `${report.winning_trades} W / ${report.losing_trades} L`;
+
+      const pfEl = document.getElementById('bt-metric-pf');
+      const grossEl = document.getElementById('bt-metric-gross');
+      if (pfEl) pfEl.textContent = report.profit_factor >= 999 ? '∞' : report.profit_factor.toFixed(2);
+      if (grossEl) grossEl.textContent = `+$${report.gross_profit.toLocaleString()} / -$${report.gross_loss.toLocaleString()}`;
+
+      const ddEl = document.getElementById('bt-metric-dd');
+      if (ddEl) ddEl.textContent = `${report.max_drawdown_pct.toFixed(2)}%`;
+
+      const shEl = document.getElementById('bt-metric-sharpe');
+      if (shEl) shEl.textContent = `${report.sharpe_ratio.toFixed(2)} / ${report.sortino_ratio.toFixed(2)}`;
+
+      const trEl = document.getElementById('bt-metric-trades');
+      const symEl = document.getElementById('bt-metric-symbol');
+      if (trEl) trEl.textContent = `${report.total_trades} TRADES`;
+      if (symEl) symEl.textContent = `${report.symbol} M15`;
+
+      const badge = document.getElementById('bt-trade-count-badge');
+      if (badge) badge.textContent = `${report.total_trades} EXECUTIONS`;
+
+      const tbody = document.getElementById('bt-trades-body');
+      if (tbody) {
+        if (!report.trades || report.trades.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="py-4 text-center text-text-muted">No trades generated during this simulation range (threshold conviction not met).</td></tr>';
+          return;
+        }
+        tbody.innerHTML = '';
+        report.trades.forEach(t => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-hairline hover:bg-surface-2';
+          const isWin = t.net_pnl >= 0;
+          const isBuy = t.direction === 'BUY';
+          tr.innerHTML = `
+            <td class="py-1.5 text-cyan-glow font-bold">${t.trade_id}</td>
+            <td class="py-1.5 font-bold">${t.symbol}</td>
+            <td class="py-1.5 ${isBuy ? 'text-green-alpha' : 'text-red-risk'} font-bold">${t.direction}</td>
+            <td class="py-1.5 text-right font-mono">${t.entry_price.toFixed(t.symbol === 'EURUSD' ? 4 : 2)}</td>
+            <td class="py-1.5 text-right font-mono">${t.exit_price.toFixed(t.symbol === 'EURUSD' ? 4 : 2)}</td>
+            <td class="py-1.5 text-right font-mono">${t.lot_size.toFixed(2)}</td>
+            <td class="py-1.5 text-right font-mono font-bold ${isWin ? 'text-green-alpha' : 'text-red-risk'}">${isWin ? '+' : ''}$${t.net_pnl.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+            <td class="py-1.5 text-right font-mono ${isWin ? 'text-green-alpha' : 'text-text-muted'}">${t.r_multiple >= 0 ? '+' : ''}${t.r_multiple.toFixed(2)}R</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
     }
 
     async function toggleKillswitch() {
@@ -1185,6 +1643,11 @@
           try {
             const data = JSON.parse(event.data);
             if (data.type !== 'HEARTBEAT') {
+              if (data.type === 'MODE_CHANGE') {
+                updateModeUI(data.mode);
+              } else if (data.type === 'BACKTEST_REPORT') {
+                renderBacktestResults(data.report);
+              }
               handleTelemetry(data);
             }
           } catch (e) {

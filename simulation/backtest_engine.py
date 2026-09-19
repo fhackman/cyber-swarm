@@ -19,10 +19,11 @@ from cyber_swarm.core.models import (
     RiskEvaluation,
     MarketTick
 )
-from cyber_swarm.quant.features import Candle, QuantFeatureEngine
+from cyber_swarm.quant.features import Candle, QuantFeatureEngine, feature_engine as global_fe
 from cyber_swarm.agents.specialized_agents import create_swarm
 from cyber_swarm.consensus.consensus_engine import ConsensusEngine
 from cyber_swarm.risk.risk_gate import InstitutionalRiskGate
+from cyber_swarm.core.config import config
 
 class BacktestConfig(BaseModel):
     initial_equity: float = 1000000.0
@@ -52,6 +53,7 @@ class BacktestReport(BaseModel):
     gross_loss: float
     profit_factor: float
     net_profit: float
+    initial_equity: float = 1000000.0
     final_equity: float
     max_drawdown_pct: float
     sharpe_ratio: float
@@ -81,6 +83,7 @@ class BacktestEngine:
 
         for i, candle in enumerate(candles):
             self.feature_engine.add_candle(symbol, "M15", candle)
+            global_fe.add_candle(symbol, "M15", candle)
             
             # Need at least 15 warmup candles for ATR & EMA
             if i < 15:
@@ -170,7 +173,7 @@ class BacktestEngine:
                 consensus = self.consensus_engine.aggregate(signals, symbol)
 
                 # Require high conviction consensus
-                if consensus.score >= 0.75 and consensus.direction in [OrderDirection.BUY, OrderDirection.SELL]:
+                if consensus.score >= config.consensus_signal_min and consensus.direction in [OrderDirection.BUY, OrderDirection.SELL]:
                     risk_lots = 1.0
                     entry_price = tick.ask if consensus.direction == OrderDirection.BUY else tick.bid
                     sl_dist = 1.5 * atr
@@ -187,6 +190,44 @@ class BacktestEngine:
                         "take_profit": tp,
                         "entry_time": candle.timestamp
                     }
+
+        # Close any remaining active position on the final candle
+        if active_position is not None and candles:
+            final_candle = candles[-1]
+            pos_dir = active_position["direction"]
+            entry_px = active_position["entry_price"]
+            lots = active_position["lots"]
+            exit_price = final_candle.close
+
+            price_diff = (exit_price - entry_px) if pos_dir == OrderDirection.BUY else (entry_px - exit_price)
+            multiplier = 100.0 if symbol == "XAUUSD" else (1.0 if symbol == "BTCUSD" else 100000.0)
+            gross_pnl = price_diff * lots * multiplier
+            commission = lots * self.config.commission_per_lot
+            net_pnl = gross_pnl - commission
+
+            equity += net_pnl
+            equity_curve.append(equity)
+            peak_equity = max(peak_equity, equity)
+            dd = ((peak_equity - equity) / peak_equity) * 100.0
+            max_drawdown_pct = max(max_drawdown_pct, dd)
+
+            r_dist = abs(entry_px - active_position["stop_loss"])
+            r_mult = price_diff / r_dist if r_dist > 0 else 0.0
+            trade_returns.append(net_pnl / equity)
+
+            trade_counter += 1
+            trades.append(BacktestTrade(
+                trade_id=f"BT-{trade_counter:04d}",
+                symbol=symbol,
+                direction=pos_dir,
+                entry_price=round(entry_px, 4),
+                exit_price=round(exit_price, 4),
+                lot_size=lots,
+                gross_pnl=round(gross_pnl, 2),
+                net_pnl=round(net_pnl, 2),
+                r_multiple=round(r_mult, 2)
+            ))
+            active_position = None
 
         # Summary Metrics Calculation
         total_trades = len(trades)
@@ -227,6 +268,7 @@ class BacktestEngine:
             gross_loss=round(gross_loss, 2),
             profit_factor=round(profit_factor, 2),
             net_profit=round(net_profit, 2),
+            initial_equity=round(self.config.initial_equity, 2),
             final_equity=round(equity, 2),
             max_drawdown_pct=round(max_drawdown_pct, 2),
             sharpe_ratio=round(sharpe, 2),
