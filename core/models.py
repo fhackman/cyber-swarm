@@ -1,8 +1,8 @@
 """CYBER SWARM TRADING OS - Pydantic Data Models"""
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from enum import Enum
-from typing import Dict, List, Optional, Any, Union
-from pydantic import BaseModel, Field
+from typing import Any
+from pydantic import BaseModel, Field, model_validator
 
 class OrderDirection(str, Enum):
     BUY = "BUY"
@@ -50,7 +50,7 @@ class MarketTick(BaseModel):
     spread: float
     volume_24h: float
     change_pct: float
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 class AgentSignal(BaseModel):
     agent_id: str
@@ -60,9 +60,9 @@ class AgentSignal(BaseModel):
     weight: float = Field(default=1.0, ge=0.0)
     reliability: float = Field(default=0.95, ge=0.0, le=1.0)
     timeframe: str = "M15"
-    evidence: List[str] = Field(default_factory=list)
+    evidence: list[str] = Field(default_factory=list)
     raw_aicl: str = ""
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     model_version: str = "v1.0.0"
 
 class ConsensusResult(BaseModel):
@@ -71,10 +71,10 @@ class ConsensusResult(BaseModel):
     direction: OrderDirection
     score: float = Field(ge=0.0, le=1.0)
     state: ConsensusState
-    participating_agents: List[str]
-    votes: Dict[str, Dict[str, Any]]
-    evidence_chain: List[str]
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    participating_agents: list[str]
+    votes: dict[str, dict[str, Any]]
+    evidence_chain: list[str]
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 class RiskEvaluation(BaseModel):
     approved: bool
@@ -84,28 +84,33 @@ class RiskEvaluation(BaseModel):
     estimated_risk_pct: float
     current_drawdown_pct: float
     exposure_pct: float
-    reasons: List[str] = Field(default_factory=list)
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    reasons: list[str] = Field(default_factory=list)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 class TradeOrder(BaseModel):
     order_id: str
-    cycle_id: Union[int, str] = 0
+    cycle_id: int | str = 0
     symbol: str
     direction: OrderDirection
     order_type: OrderType = OrderType.MARKET
     lot_size: float = 0.10
     target_price: float
-    limit_price: Optional[float] = None
-    fill_price: Optional[float] = None
-    stop_loss: Optional[float] = None
-    take_profit: Optional[float] = None
-    take_profit_points: Optional[int] = None
-    trailing_distance: Optional[float] = None
-    trailing_activation: Optional[float] = None
+    limit_price: float | None = None
+    fill_price: float | None = None
+    stop_loss: float | None = None
+    take_profit: float | None = None
+    take_profit_points: int | None = None
+    trailing_distance: float | None = None
+    trailing_activation: float | None = None
     slippage_bps: float = 0.0
     status: OrderStatus = OrderStatus.PENDING
-    decision_trace: List[str] = Field(default_factory=list)
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    decision_trace: list[str] = Field(default_factory=list)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @property
+    def effective_limit_price(self) -> float:
+        """Returns limit_price if defined, otherwise falls back to target_price."""
+        return self.limit_price if self.limit_price is not None else self.target_price
 
 class Position(BaseModel):
     position_id: str
@@ -114,9 +119,9 @@ class Position(BaseModel):
     lot_size: float = 0.10
     entry_price: float
     current_price: float
-    stop_loss: Optional[float] = None
-    take_profit: Optional[float] = None
-    take_profit_points: Optional[int] = None
+    stop_loss: float | None = None
+    take_profit: float | None = None
+    take_profit_points: int | None = None
     trailing_active: bool = False
     trail_distance: float = 0.0
     trail_activation_delta: float = 0.0
@@ -124,7 +129,16 @@ class Position(BaseModel):
     lowest_price: float = 0.0
     unrealized_pnl: float = 0.0
     realized_pnl: float = 0.0
-    entry_time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    entry_time: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    open_time: datetime | None = None
+
+    @model_validator(mode="after")
+    def sync_entry_and_open_time(self) -> "Position":
+        if self.open_time is not None and "entry_time" not in self.model_fields_set:
+            self.entry_time = self.open_time
+        elif self.open_time is None:
+            self.open_time = self.entry_time
+        return self
 
 class ReconciliationRecord(BaseModel):
     order_id: str
@@ -134,19 +148,19 @@ class ReconciliationRecord(BaseModel):
     limit_price: float
     action: ReconciliationAction
     reason: str
-    market_price: Optional[float] = None
-    consensus_score: Optional[float] = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    market_price: float | None = None
+    consensus_score: float | None = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 class ReconciliationReport(BaseModel):
     reconciliation_id: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     downtime_seconds: float = 0.0
     total_reviewed: int = 0
     retained_count: int = 0
     cancelled_count: int = 0
     filled_count: int = 0
-    records: List[ReconciliationRecord] = Field(default_factory=list)
+    records: list[ReconciliationRecord] = Field(default_factory=list)
 
 class PortfolioState(BaseModel):
     net_equity: float
@@ -166,18 +180,18 @@ class PortfolioState(BaseModel):
     min_lot_size: float = 0.01
     max_lot_size: float = 5.00
     lot_step: float = 0.01
-    lot_presets: List[float] = Field(default_factory=lambda: [0.01, 0.05, 0.10, 0.20, 0.50, 1.00])
+    lot_presets: list[float] = Field(default_factory=lambda: [0.01, 0.05, 0.10, 0.20, 0.50, 1.00])
     network_status: NetworkStatus = NetworkStatus.ONLINE
-    last_reconciliation: Optional[ReconciliationReport] = None
-    open_positions: List[Position] = Field(default_factory=list)
-    pending_orders: List[TradeOrder] = Field(default_factory=list)
+    last_reconciliation: ReconciliationReport | None = None
+    open_positions: list[Position] = Field(default_factory=list)
+    pending_orders: list[TradeOrder] = Field(default_factory=list)
     uptime_pct: float = 99.98
     active_cycle: int = 84209
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 class TelemetryEvent(BaseModel):
     timestamp: str
     source: str
     event_type: str
     message: str
-    payload: Dict[str, Any] = Field(default_factory=dict)
+    payload: dict[str, Any] = Field(default_factory=dict)

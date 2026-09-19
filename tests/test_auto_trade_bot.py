@@ -1,6 +1,6 @@
 """CYBER SWARM TRADING OS - Auto Trade Bot, Fixed 0.10 Lot & Trailing Stop Tests"""
 import pytest
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from cyber_swarm.core.config import config
 from cyber_swarm.core.models import (
@@ -57,7 +57,7 @@ def sample_tick():
         spread=0.4,
         volume_24h=50000.0,
         change_pct=0.5,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(UTC)
     )
 
 
@@ -133,7 +133,7 @@ def test_create_and_fill_buy_limit_order(router):
     # Tick at 2728.0 (above limit) -> should NOT fill
     tick_above = MarketTick(
         symbol="XAUUSD", price=2728.0, bid=2727.8, ask=2728.2,
-        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(timezone.utc)
+        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(UTC)
     )
     filled = router.check_pending_orders(tick_above)
     assert len(filled) == 0
@@ -142,7 +142,7 @@ def test_create_and_fill_buy_limit_order(router):
     # Tick at 2724.5 (touches/crosses limit) -> must fill BUY_LIMIT
     tick_fill = MarketTick(
         symbol="XAUUSD", price=2724.5, bid=2724.3, ask=2724.7,
-        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(timezone.utc)
+        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(UTC)
     )
     filled = router.check_pending_orders(tick_fill)
     assert len(filled) == 1
@@ -173,7 +173,7 @@ def test_create_and_fill_sell_limit_order(router):
     # Tick at 68200.0 (below limit) -> should NOT fill
     tick_below = MarketTick(
         symbol="BTCUSD", price=68200.0, bid=68190.0, ask=68210.0,
-        spread=20.0, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(timezone.utc)
+        spread=20.0, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(UTC)
     )
     filled = router.check_pending_orders(tick_below)
     assert len(filled) == 0
@@ -181,7 +181,7 @@ def test_create_and_fill_sell_limit_order(router):
     # Tick at 68550.0 (reaches limit) -> must fill SELL_LIMIT
     tick_fill = MarketTick(
         symbol="BTCUSD", price=68550.0, bid=68540.0, ask=68560.0,
-        spread=20.0, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(timezone.utc)
+        spread=20.0, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(UTC)
     )
     filled = router.check_pending_orders(tick_fill)
     assert len(filled) == 1
@@ -209,7 +209,7 @@ def test_cancel_pending_order(router):
     # Check pending order no longer fills
     tick = MarketTick(
         symbol="EURUSD", price=1.0750, bid=1.0749, ask=1.0751,
-        spread=0.0002, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(timezone.utc)
+        spread=0.0002, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(UTC)
     )
     filled = router.check_pending_orders(tick)
     assert len(filled) == 0
@@ -241,7 +241,7 @@ def test_auto_trailing_stop_ratchet_and_closure(router):
     # 1. Price moves to 2732.0 (profit +2.0 < activation delta +4.0) -> Trailing stays inactive
     tick_1 = MarketTick(
         symbol="XAUUSD", price=2732.0, bid=2731.8, ask=2732.2,
-        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(timezone.utc)
+        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(UTC)
     )
     msgs = router.apply_trailing_stop(tick_1)
     assert len(msgs) == 0
@@ -252,7 +252,7 @@ def test_auto_trailing_stop_ratchet_and_closure(router):
     # Ratchet SL = 2736.0 - 8.0 = 2728.0 (higher than initial 2722.0)
     tick_2 = MarketTick(
         symbol="XAUUSD", price=2736.0, bid=2735.8, ask=2736.2,
-        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(timezone.utc)
+        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(UTC)
     )
     msgs = router.apply_trailing_stop(tick_2)
     assert any("Trailing SL ratcheted" in m for m in msgs)
@@ -262,7 +262,7 @@ def test_auto_trailing_stop_ratchet_and_closure(router):
     # 3. Price rallies higher to 2742.0 -> SL ratchets to 2742.0 - 8.0 = 2734.0 (locked profit +$4.00!)
     tick_3 = MarketTick(
         symbol="XAUUSD", price=2742.0, bid=2741.8, ask=2742.2,
-        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(timezone.utc)
+        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(UTC)
     )
     msgs = router.apply_trailing_stop(tick_3)
     assert pos.stop_loss == 2734.0
@@ -271,7 +271,7 @@ def test_auto_trailing_stop_ratchet_and_closure(router):
     # 4. Price pulls back to 2733.5 (breaches ratcheted SL of 2734.0) -> Position auto-closes with locked profit!
     tick_4 = MarketTick(
         symbol="XAUUSD", price=2733.5, bid=2733.3, ask=2733.7,
-        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(timezone.utc)
+        spread=0.4, volume_24h=100.0, change_pct=0.0, timestamp=datetime.now(UTC)
     )
     msgs = router.apply_trailing_stop(tick_4)
     assert any("Trailing Stop Triggered" in m for m in msgs)

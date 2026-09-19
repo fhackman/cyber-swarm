@@ -9,9 +9,7 @@ Enforces fail-closed deterministic invariants:
 6. Stale Data & Feed Latency Guard (< 2000ms)
 7. Spread & Session Anomaly Filter
 """
-import time
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+from datetime import datetime, UTC
 
 from cyber_swarm.core.models import (
     ConsensusResult,
@@ -41,11 +39,12 @@ class InstitutionalRiskGate:
         consensus: ConsensusResult,
         tick: MarketTick,
         portfolio: PortfolioState,
-        lot_size: float = 0.10
+        lot_size: float | None = None
     ) -> RiskEvaluation:
         """Evaluates whether the consensus signal passes all institutional risk constraints."""
-        reasons: List[str] = []
+        reasons: list[str] = []
         approved = True
+        target_lot = lot_size if lot_size is not None else config.fixed_lot_size
 
         # Invariant 1: Emergency Stop Check
         if self.killswitch_active:
@@ -99,7 +98,7 @@ class InstitutionalRiskGate:
             )
 
         # Invariant 6: Data Freshness / Stale Feed Check
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         tick_age_ms = (now_utc - tick.timestamp).total_seconds() * 1000.0
         if tick_age_ms > config.max_stale_data_latency_ms:
             approved = False
@@ -116,21 +115,21 @@ class InstitutionalRiskGate:
             reasons.append("AUTO_TRADE_DISABLED: Master bot execution switch is inactive")
 
         # Invariant 9: Fixed / Configured Lot Size Invariant & Bounds Check
-        if lot_size < config.min_lot_size or lot_size > config.max_lot_size:
+        if target_lot < config.min_lot_size or target_lot > config.max_lot_size:
             approved = False
             reasons.append(
-                f"LOT_SIZE_OUT_OF_BOUNDS: {lot_size:.2f} lot outside [{config.min_lot_size:.2f}, {config.max_lot_size:.2f}]"
+                f"LOT_SIZE_OUT_OF_BOUNDS: {target_lot:.2f} lot outside [{config.min_lot_size:.2f}, {config.max_lot_size:.2f}]"
             )
-        elif round(lot_size, 2) != round(config.fixed_lot_size, 2):
+        elif round(target_lot, 2) != round(config.fixed_lot_size, 2):
             approved = False
             reasons.append(
-                f"FIXED_LOT_SIZE_VIOLATION: Required {config.fixed_lot_size:.2f} lot, got {lot_size:.2f}"
+                f"FIXED_LOT_SIZE_VIOLATION: Required {config.fixed_lot_size:.2f} lot, got {target_lot:.2f}"
             )
 
         # Position Sizing & Risk per Trade Calculation
         # Scaled dynamically relative to base 0.10 lot (nominal 1.45%)
         base_nominal_risk = 1.45
-        estimated_risk_pct = round(base_nominal_risk * (lot_size / 0.10 if lot_size > 0 else 1.0), 2)
+        estimated_risk_pct = round(base_nominal_risk * (target_lot / 0.10 if target_lot > 0 else 1.0), 2)
 
         if estimated_risk_pct > config.max_risk_per_trade_pct:
             approved = False
@@ -148,7 +147,7 @@ class InstitutionalRiskGate:
             approved=approved,
             direction=consensus.direction if approved else OrderDirection.HOLD,
             symbol=consensus.symbol,
-            lot_size=lot_size if approved else 0.0,
+            lot_size=target_lot if approved else 0.0,
             estimated_risk_pct=estimated_risk_pct if approved else 0.0,
             current_drawdown_pct=portfolio.daily_drawdown_pct,
             exposure_pct=portfolio.risk_exposure_pct,

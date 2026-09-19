@@ -1,9 +1,9 @@
 """CYBER SWARM TRADING OS - Cryptographic Immutable Audit Ledger (MARIN)"""
 import hashlib
 import json
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from datetime import datetime, UTC
+from typing import Any
+from pydantic import BaseModel
 
 class AuditRecord(BaseModel):
     index: int
@@ -11,18 +11,18 @@ class AuditRecord(BaseModel):
     event_type: str
     source: str
     message: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     prev_hash: str
     hash: str
 
 class ImmutableAuditLedger:
     def __init__(self):
-        self.records: List[AuditRecord] = []
+        self.records: list[AuditRecord] = []
         self._genesis()
 
     def _genesis(self):
         genesis_payload = {"system": "CYBER_SWARM_OS", "version": "v2.4.19-PROD"}
-        ts = datetime.now(timezone.utc).strftime("%H:%M:%S.%f")[:-3]
+        ts = datetime.now(UTC).strftime("%H:%M:%S.%f")[:-3]
         h = hashlib.sha256(json.dumps(genesis_payload, sort_keys=True).encode()).hexdigest()
         self.records.append(
             AuditRecord(
@@ -39,7 +39,7 @@ class ImmutableAuditLedger:
         self._seed_recent_timeline()
 
     def _seed_recent_timeline(self):
-        events = [
+        events: list[tuple[str, str, str, dict[str, Any]]] = [
             ("TIDAL", "SIGNAL", "TIDAL detected liquidity sweep on XAUUSD M15", {"sym": "XAUUSD", "cf": 0.924}),
             ("NORO", "SIGNAL", "NORO confirmed bearish exhaustion 78% in premium zone", {"sym": "XAUUSD", "cf": 0.78}),
             ("LUMEN", "REGIME", "LUMEN neutral 52% (Macro disconnect balanced)", {"sym": "XAUUSD", "cf": 0.52}),
@@ -52,15 +52,15 @@ class ImmutableAuditLedger:
         for src, etype, msg, payload in events:
             self.record_event(src, etype, msg, payload)
 
-    def record_event(self, source: str, event_type: str, message: str, payload: Optional[Dict[str, Any]] = None) -> AuditRecord:
+    def record_event(self, source: str, event_type: str, message: str, payload: dict[str, Any] | None = None) -> AuditRecord:
         payload = payload or {}
         last_rec = self.records[-1]
         new_idx = last_rec.index + 1
-        ts = datetime.now(timezone.utc).strftime("%H:%M:%S.%f")[:-3]
-        
+        ts = datetime.now(UTC).strftime("%H:%M:%S.%f")[:-3]
+
         block_content = f"{new_idx}{ts}{source}{event_type}{message}{json.dumps(payload, sort_keys=True)}{last_rec.hash}"
         new_hash = hashlib.sha256(block_content.encode()).hexdigest()
-        
+
         record = AuditRecord(
             index=new_idx,
             timestamp=ts,
@@ -74,7 +74,7 @@ class ImmutableAuditLedger:
         self.records.append(record)
         return record
 
-    def get_recent(self, limit: int = 50) -> List[AuditRecord]:
+    def get_recent(self, limit: int = 50) -> list[AuditRecord]:
         return self.records[-limit:]
 
     def verify_integrity(self) -> bool:
@@ -88,6 +88,10 @@ class ImmutableAuditLedger:
             if hashlib.sha256(block_content.encode()).hexdigest() != curr.hash:
                 return False
         return True
+
+    def verify_chain(self) -> bool:
+        """Alias for verify_integrity."""
+        return self.verify_integrity()
 
 # Global singleton ledger
 ledger = ImmutableAuditLedger()

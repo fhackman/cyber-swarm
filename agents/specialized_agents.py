@@ -10,8 +10,8 @@
 8. MARIN: Portfolio reconciliation / settlement / immutable audit
 """
 import time
-from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
+from datetime import datetime, UTC
+from typing import Any
 
 from cyber_swarm.agents.base_agent import BaseSwarmAgent
 from cyber_swarm.core.models import AgentSignal, OrderDirection, MarketTick
@@ -27,10 +27,10 @@ class NoroAgent(BaseSwarmAgent):
             reliability=0.96
         )
 
-    async def evaluate(self, tick: MarketTick, context_data: Optional[Dict[str, Any]] = None) -> AgentSignal:
+    async def evaluate(self, tick: MarketTick, context_data: dict[str, Any] | None = None) -> AgentSignal:
         t0 = time.perf_counter()
         self.status = "PROCESSING"
-        
+
         # Valuation logic: evaluates short-term deviation from mean or value level via Feature Engine
         features = feature_engine.calculate_features(tick.symbol, "M15")
         evidence = []
@@ -55,7 +55,7 @@ class NoroAgent(BaseSwarmAgent):
             evidence.append("equilibrium_fair_value")
 
         self.last_latency_ms = (time.perf_counter() - t0) * 1000.0
-        self.last_heartbeat = datetime.now(timezone.utc)
+        self.last_heartbeat = datetime.now(UTC)
         self.status = "SYNCED"
 
         sig = AgentSignal(
@@ -82,7 +82,7 @@ class LumenAgent(BaseSwarmAgent):
             reliability=0.91
         )
 
-    async def evaluate(self, tick: MarketTick, context_data: Optional[Dict[str, Any]] = None) -> AgentSignal:
+    async def evaluate(self, tick: MarketTick, context_data: dict[str, Any] | None = None) -> AgentSignal:
         t0 = time.perf_counter()
         self.status = "PROCESSING"
 
@@ -92,7 +92,7 @@ class LumenAgent(BaseSwarmAgent):
         confidence = 0.79
 
         self.last_latency_ms = (time.perf_counter() - t0) * 1000.0
-        self.last_heartbeat = datetime.now(timezone.utc)
+        self.last_heartbeat = datetime.now(UTC)
         self.status = "SYNCED"
 
         sig = AgentSignal(
@@ -119,7 +119,7 @@ class TidalAgent(BaseSwarmAgent):
             reliability=0.98
         )
 
-    async def evaluate(self, tick: MarketTick, context_data: Optional[Dict[str, Any]] = None) -> AgentSignal:
+    async def evaluate(self, tick: MarketTick, context_data: dict[str, Any] | None = None) -> AgentSignal:
         t0 = time.perf_counter()
         self.status = "PROCESSING"
 
@@ -147,7 +147,7 @@ class TidalAgent(BaseSwarmAgent):
             evidence.append(f"active_{features.order_block['type'].lower()}")
 
         self.last_latency_ms = (time.perf_counter() - t0) * 1000.0
-        self.last_heartbeat = datetime.now(timezone.utc)
+        self.last_heartbeat = datetime.now(UTC)
         self.status = "SYNCED"
 
         sig = AgentSignal(
@@ -174,7 +174,7 @@ class ZephrAgent(BaseSwarmAgent):
             reliability=0.95
         )
 
-    async def evaluate(self, tick: MarketTick, context_data: Optional[Dict[str, Any]] = None) -> AgentSignal:
+    async def evaluate(self, tick: MarketTick, context_data: dict[str, Any] | None = None) -> AgentSignal:
         t0 = time.perf_counter()
         self.status = "PROCESSING"
 
@@ -184,7 +184,7 @@ class ZephrAgent(BaseSwarmAgent):
         confidence = 0.881
 
         self.last_latency_ms = (time.perf_counter() - t0) * 1000.0
-        self.last_heartbeat = datetime.now(timezone.utc)
+        self.last_heartbeat = datetime.now(UTC)
         self.status = "SYNCED"
 
         sig = AgentSignal(
@@ -211,7 +211,7 @@ class RuneAgent(BaseSwarmAgent):
             reliability=0.99
         )
 
-    async def evaluate(self, tick: MarketTick, context_data: Optional[Dict[str, Any]] = None) -> AgentSignal:
+    async def evaluate(self, tick: MarketTick, context_data: dict[str, Any] | None = None) -> AgentSignal:
         t0 = time.perf_counter()
         self.status = "PROCESSING"
 
@@ -220,7 +220,7 @@ class RuneAgent(BaseSwarmAgent):
         confidence = 0.96
 
         self.last_latency_ms = (time.perf_counter() - t0) * 1000.0
-        self.last_heartbeat = datetime.now(timezone.utc)
+        self.last_heartbeat = datetime.now(UTC)
         self.status = "SYNCED"
 
         sig = AgentSignal(
@@ -247,7 +247,7 @@ class OkapiAgent(BaseSwarmAgent):
             reliability=0.93
         )
 
-    async def evaluate(self, tick: MarketTick, context_data: Optional[Dict[str, Any]] = None) -> AgentSignal:
+    async def evaluate(self, tick: MarketTick, context_data: dict[str, Any] | None = None) -> AgentSignal:
         t0 = time.perf_counter()
         self.status = "PROCESSING"
 
@@ -256,7 +256,7 @@ class OkapiAgent(BaseSwarmAgent):
         confidence = 0.81
 
         self.last_latency_ms = (time.perf_counter() - t0) * 1000.0
-        self.last_heartbeat = datetime.now(timezone.utc)
+        self.last_heartbeat = datetime.now(UTC)
         self.status = "SYNCED"
 
         sig = AgentSignal(
@@ -283,7 +283,7 @@ class VeskaAgent(BaseSwarmAgent):
             reliability=0.97
         )
 
-    async def evaluate(self, tick: MarketTick, context_data: Optional[Dict[str, Any]] = None) -> AgentSignal:
+    async def evaluate(self, tick: MarketTick, context_data: dict[str, Any] | None = None) -> AgentSignal:
         t0 = time.perf_counter()
         self.status = "PROCESSING"
 
@@ -292,7 +292,7 @@ class VeskaAgent(BaseSwarmAgent):
         confidence = 0.89
 
         self.last_latency_ms = (time.perf_counter() - t0) * 1000.0
-        self.last_heartbeat = datetime.now(timezone.utc)
+        self.last_heartbeat = datetime.now(UTC)
         self.status = "SYNCED"
 
         sig = AgentSignal(
@@ -319,7 +319,7 @@ class MarinAgent(BaseSwarmAgent):
             reliability=0.99
         )
 
-    async def evaluate(self, tick: MarketTick, context_data: Optional[Dict[str, Any]] = None) -> AgentSignal:
+    async def evaluate(self, tick: MarketTick, context_data: dict[str, Any] | None = None) -> AgentSignal:
         t0 = time.perf_counter()
         self.status = "PROCESSING"
 
@@ -328,7 +328,7 @@ class MarinAgent(BaseSwarmAgent):
         confidence = 0.95
 
         self.last_latency_ms = (time.perf_counter() - t0) * 1000.0
-        self.last_heartbeat = datetime.now(timezone.utc)
+        self.last_heartbeat = datetime.now(UTC)
         self.status = "SYNCED"
 
         sig = AgentSignal(
@@ -345,7 +345,7 @@ class MarinAgent(BaseSwarmAgent):
         return sig
 
 
-def create_swarm() -> Dict[str, BaseSwarmAgent]:
+def create_swarm() -> dict[str, BaseSwarmAgent]:
     """Instantiates and registers the 8 canonical heterogeneous agents."""
     return {
         "NORO": NoroAgent(),

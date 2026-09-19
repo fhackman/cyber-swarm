@@ -1,5 +1,4 @@
 """Tests for Consensus Engine Aggregation"""
-import pytest
 from cyber_swarm.consensus.consensus_engine import ConsensusEngine
 from cyber_swarm.core.models import AgentSignal, OrderDirection, ConsensusState
 

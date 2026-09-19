@@ -5,21 +5,21 @@ Canonical format:
     @ACT SRC>DST | CTX | OBJ | CON | DATA | OUT | ST | NEXT
 """
 import re
-from typing import Dict, Any, Optional, List
+from typing import Any
 from pydantic import BaseModel, Field
 
 class AICLMessage(BaseModel):
     action: str = Field(description="Action verb, e.g. ANL, SET, GET, VAL, ACK, SIG")
     source: str = Field(description="Source agent ID, e.g. TIDAL, NORO, ORC")
     destination: str = Field(description="Destination agent ID, e.g. ORC, ALL, VESKA")
-    context: Optional[str] = None
-    objective: Optional[str] = None
-    constraints: Optional[str] = None
-    data: Dict[str, Any] = Field(default_factory=dict)
-    raw_data: Optional[str] = None
-    output_format: Optional[str] = None
+    context: str | None = None
+    objective: str | None = None
+    constraints: str | None = None
+    data: dict[str, Any] = Field(default_factory=dict)
+    raw_data: str | None = None
+    output_format: str | None = None
     state: str = "RDY"
-    next_action: Optional[str] = None
+    next_action: str | None = None
     raw: str = ""
 
     def encode(self) -> str:
@@ -32,7 +32,7 @@ class AICLMessage(BaseModel):
             parts.append(f"OBJ={self.objective}")
         if self.constraints:
             parts.append(f"CON={self.constraints}")
-        
+
         # Serialize data dict if present
         if self.data:
             data_items = [f"{k}:{v}" for k, v in self.data.items()]
@@ -54,14 +54,14 @@ class AICLMessage(BaseModel):
         text = text.strip()
         if not text:
             raise ValueError("AICL text cannot be empty")
-        
+
         # Split header and segments
         if "|" in text:
             header_part, *segment_parts = text.split("|")
         else:
             header_part = text
             segment_parts = []
-        
+
         # Parse header: @ACT SRC>DST
         header_part = header_part.strip()
         match = re.match(r"^@?([A-Za-z0-9_-]+)\s+([A-Za-z0-9_-]+)>([A-Za-z0-9_-]+)", header_part)
@@ -86,7 +86,7 @@ class AICLMessage(BaseModel):
             segment = segment.strip()
             if not segment:
                 continue
-            
+
             if "=" in segment:
                 key, val = segment.split("=", 1)
                 key = key.upper().strip()
@@ -111,15 +111,13 @@ class AICLMessage(BaseModel):
                         if ":" in item:
                             dk, dv = item.split(":", 1)
                             # Convert number types where applicable
-                            dv = dv.strip()
+                            dv_raw = dv.strip()
+                            parsed_val: Any = dv_raw
                             try:
-                                if "." in dv:
-                                    dv = float(dv)
-                                else:
-                                    dv = int(dv)
+                                parsed_val = float(dv_raw) if "." in dv_raw else int(dv_raw)
                             except ValueError:
-                                pass
-                            data_dict[dk.strip().lower()] = dv
+                                parsed_val = dv_raw
+                            data_dict[dk.strip().lower()] = parsed_val
                         else:
                             data_dict[item.strip().lower()] = True
                     msg.data = data_dict
@@ -138,13 +136,11 @@ class AICLMessage(BaseModel):
                 continue
             op = instruction[0]
             rest = instruction[1:]
-            if op == "+":  # Add
-                if "=" in rest:
-                    k, v = rest.split("=", 1)
-                    self.data[k.strip().lower()] = v.strip()
+            if op == "+" and "=" in rest:  # Add
+                k, v = rest.split("=", 1)
+                self.data[k.strip().lower()] = v.strip()
             elif op == "-":  # Remove
                 self.data.pop(rest.strip().lower(), None)
-            elif op == "~":  # Modify
-                if "=" in rest:
-                    k, v = rest.split("=", 1)
-                    self.data[k.strip().lower()] = v.strip()
+            elif op == "~" and "=" in rest:  # Modify
+                k, v = rest.split("=", 1)
+                self.data[k.strip().lower()] = v.strip()

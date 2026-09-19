@@ -1,6 +1,6 @@
 """End-to-End Integration Test for CYBER SWARM Pipeline"""
 import pytest
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from cyber_swarm.agents.specialized_agents import create_swarm
 from cyber_swarm.consensus.consensus_engine import ConsensusEngine
@@ -24,12 +24,12 @@ async def test_full_trading_pipeline_e2e():
         spread=0.25,
         volume_24h=28400000.0,
         change_pct=1.45,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(UTC)
     )
 
     # 1. Swarm deliberation
     signals = []
-    for agent_id, agent in swarm.items():
+    for _agent_id, agent in swarm.items():
         sig = await agent.evaluate(tick)
         signals.append(sig)
         assert sig.raw_aicl != ""

@@ -1,6 +1,4 @@
 """Unit Tests for Quant & SMC Feature Engine"""
-import pytest
-from datetime import datetime, timezone
 from cyber_swarm.quant.features import QuantFeatureEngine, Candle, MarketStructure
 
 def test_atr_calculation():

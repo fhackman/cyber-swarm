@@ -6,17 +6,14 @@ Direct institutional connection to live MetaTrader 5 terminal:
 - Account equity, balance, leverage, and ping synchronization
 - Live position reconciliation directly from broker account
 """
-import os
-import asyncio
-from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
+from datetime import datetime, UTC
+from typing import Any
 import logging
 
 from cyber_swarm.core.models import (
     MarketTick,
     Position,
     OrderDirection,
-    PortfolioState,
     TradeOrder,
     OrderStatus,
     OrderType,
@@ -42,9 +39,9 @@ class MT5Connector:
         self.server_name: str = "Internal"
         self.equity: float = config.initial_equity
         self.balance: float = config.initial_equity
-        self.resolved_symbols: Dict[str, str] = {}
+        self.resolved_symbols: dict[str, str] = {}
         self.network_status: NetworkStatus = NetworkStatus.ONLINE
-        self.disconnected_at: Optional[datetime] = None
+        self.disconnected_at: datetime | None = None
         self.downtime_duration_seconds: float = 0.0
         self.reconnected_event: bool = False
         self._check_connection()
@@ -92,17 +89,18 @@ class MT5Connector:
                 if mt5.initialize():
                     is_currently_connected = True
         except Exception as e:
+            logger.debug(f"MT5 heartbeat check failed: {e}")
             is_currently_connected = False
 
         if was_connected and not is_currently_connected:
             self.connected = False
             self.network_status = NetworkStatus.DISCONNECTED
-            self.disconnected_at = datetime.now(timezone.utc)
+            self.disconnected_at = datetime.now(UTC)
             logger.warning("MetaTrader 5 network disconnect detected! Transitioning to DISCONNECTED.")
         elif not was_connected and is_currently_connected:
             self.connected = True
             if self.disconnected_at:
-                self.downtime_duration_seconds = round((datetime.now(timezone.utc) - self.disconnected_at).total_seconds(), 2)
+                self.downtime_duration_seconds = round((datetime.now(UTC) - self.disconnected_at).total_seconds(), 2)
             else:
                 self.downtime_duration_seconds = 0.0
             self.network_status = NetworkStatus.RECONCILING
@@ -115,7 +113,7 @@ class MT5Connector:
         else:
             self.network_status = NetworkStatus.DISCONNECTED
             if self.disconnected_at:
-                self.downtime_duration_seconds = round((datetime.now(timezone.utc) - self.disconnected_at).total_seconds(), 2)
+                self.downtime_duration_seconds = round((datetime.now(UTC) - self.disconnected_at).total_seconds(), 2)
 
         return self.connected
 
@@ -123,7 +121,7 @@ class MT5Connector:
         """Simulates network disconnection for testing & validation."""
         self.connected = False
         self.network_status = NetworkStatus.DISCONNECTED
-        self.disconnected_at = datetime.now(timezone.utc)
+        self.disconnected_at = datetime.now(UTC)
         logger.warning("Simulated network disconnect triggered.")
 
     def simulate_network_reconnect(self, downtime_seconds: float = 5.0):
@@ -147,7 +145,7 @@ class MT5Connector:
             if standard_sym not in self.resolved_symbols:
                 self.resolved_symbols[standard_sym] = standard_sym
 
-    def get_real_account_info(self) -> Dict[str, Any]:
+    def get_real_account_info(self) -> dict[str, Any]:
         """Returns verified real account metrics from MT5."""
         if not self.connected:
             return {
@@ -196,7 +194,7 @@ class MT5Connector:
     async def fetch_tick(self, symbol: str) -> MarketTick:
         """Fetches the latest real tick from MT5 if connected, else fallback to high-fidelity feed."""
         actual_symbol = self.resolved_symbols.get(symbol, symbol)
-        
+
         if self.connected:
             try:
                 import MetaTrader5 as mt5
@@ -204,7 +202,7 @@ class MT5Connector:
                 if tick_data and tick_data.bid > 0 and tick_data.ask > 0:
                     mid = round((tick_data.bid + tick_data.ask) / 2.0, 5)
                     spread = round(tick_data.ask - tick_data.bid, 5)
-                    
+
                     # Calculate real 24h change % from D1 bar open
                     change_pct = 0.0
                     rates = mt5.copy_rates_from_pos(actual_symbol, mt5.TIMEFRAME_D1, 0, 1)
@@ -212,7 +210,7 @@ class MT5Connector:
                         daily_open = rates[0][1]
                         if daily_open > 0:
                             change_pct = round(((mid - daily_open) / daily_open) * 100.0, 2)
-                    
+
                     return MarketTick(
                         symbol=symbol,  # Normalized standard symbol for Swarm
                         price=mid,
@@ -255,7 +253,7 @@ class MT5Connector:
         symbol: str,
         direction: OrderDirection,
         entry_price: float,
-        points: Optional[int] = None,
+        points: int | None = None,
         respect_current_price: bool = False
     ) -> float:
         """Calculates Take Profit target using live MT5 symbol specification (or config fallback).
@@ -292,18 +290,16 @@ class MT5Connector:
 
         if direction == OrderDirection.BUY:
             raw_tp = entry_price + delta
-            if respect_current_price and tick_bid is not None and tick_bid > 0:
-                if raw_tp <= tick_bid + buffer:
-                    raw_tp = tick_bid + delta
+            if respect_current_price and tick_bid is not None and tick_bid > 0 and raw_tp <= tick_bid + buffer:
+                raw_tp = tick_bid + delta
             return round(raw_tp, decimals)
         else:
             raw_tp = entry_price - delta
-            if respect_current_price and tick_ask is not None and tick_ask > 0:
-                if raw_tp >= tick_ask - buffer:
-                    raw_tp = tick_ask - delta
+            if respect_current_price and tick_ask is not None and tick_ask > 0 and raw_tp >= tick_ask - buffer:
+                raw_tp = tick_ask - delta
             return round(raw_tp, decimals)
 
-    def fetch_live_positions(self) -> List[Position]:
+    def fetch_live_positions(self) -> list[Position]:
         """Fetches real open positions from MetaTrader 5 terminal, populating live TP and syncing if missing."""
         if not self.connected:
             return []
@@ -312,7 +308,7 @@ class MT5Connector:
             positions = mt5.positions_get()
             if not positions:
                 return []
-            
+
             live_pos = []
             for p in positions:
                 side = OrderDirection.BUY if p.type == 0 else OrderDirection.SELL
@@ -354,10 +350,10 @@ class MT5Connector:
         symbol: str,
         direction: OrderDirection,
         limit_price: float,
-        lot_size: Optional[float] = None,
-        sl: Optional[float] = None,
-        tp: Optional[float] = None
-    ) -> Optional[int]:
+        lot_size: float | None = None,
+        sl: float | None = None,
+        tp: float | None = None
+    ) -> int | None:
         """Sends a real pending limit order to MT5 terminal with auto Take Profit and volume normalization."""
         if not self.connected:
             return None
@@ -369,10 +365,10 @@ class MT5Connector:
             # Normalize lot size against broker symbol volume constraints
             target_lot = lot_size if lot_size is not None else config.fixed_lot_size
             s_info = mt5.symbol_info(actual_symbol)
-            if s_info and hasattr(s_info, "volume_min") and isinstance(getattr(s_info, "volume_min"), (int, float)) and s_info.volume_min > 0:
+            if s_info and hasattr(s_info, "volume_min") and isinstance(s_info.volume_min, (int, float)) and s_info.volume_min > 0:
                 vmin = s_info.volume_min
-                vmax = s_info.volume_max if (hasattr(s_info, "volume_max") and isinstance(getattr(s_info, "volume_max"), (int, float)) and s_info.volume_max > 0) else config.max_lot_size
-                vstep = s_info.volume_step if (hasattr(s_info, "volume_step") and isinstance(getattr(s_info, "volume_step"), (int, float)) and s_info.volume_step > 0) else config.lot_step
+                vmax = s_info.volume_max if (hasattr(s_info, "volume_max") and isinstance(s_info.volume_max, (int, float)) and s_info.volume_max > 0) else config.max_lot_size
+                vstep = s_info.volume_step if (hasattr(s_info, "volume_step") and isinstance(s_info.volume_step, (int, float)) and s_info.volume_step > 0) else config.lot_step
                 target_lot = max(vmin, min(vmax, target_lot))
                 target_lot = round(round(target_lot / vstep) * vstep, 2)
             else:
@@ -403,7 +399,7 @@ class MT5Connector:
             result = mt5.order_send(request)
             if result and result.retcode == mt5.TRADE_RETCODE_DONE:
                 logger.info(f"MT5 Pending Limit Order placed: ticket={result.order} {actual_symbol} @ {limit_price} (TP={target_tp})")
-                return result.order
+                return int(result.order)
             else:
                 err = result.comment if result else "Unknown MT5 error"
                 logger.warning(f"Failed to place MT5 limit order for {actual_symbol}: {err}")
@@ -412,7 +408,7 @@ class MT5Connector:
             logger.error(f"Error sending MT5 pending limit order: {e}")
             return None
 
-    def modify_position_sltp(self, ticket: int, sl: float, tp: Optional[float] = 0.0, symbol: Optional[str] = None) -> bool:
+    def modify_position_sltp(self, ticket: int, sl: float, tp: float | None = 0.0, symbol: str | None = None) -> bool:
         """Modifies Stop Loss and Take Profit for an active open MT5 position."""
         if not self.connected:
             return False
@@ -445,7 +441,7 @@ class MT5Connector:
             logger.error(f"Error modifying SL/TP for ticket {ticket}: {e}")
             return False
 
-    def sync_open_positions_tp(self, points: Optional[int] = None) -> int:
+    def sync_open_positions_tp(self, points: int | None = None) -> int:
         """Inspects all live MT5 open positions and updates any with tp == 0.0 directly on broker."""
         if not self.connected:
             return 0
@@ -454,7 +450,7 @@ class MT5Connector:
             positions = mt5.positions_get()
             if not positions:
                 return 0
-            
+
             modified_count = 0
             for p in positions:
                 if p.tp == 0.0 or p.tp is None:
@@ -469,7 +465,7 @@ class MT5Connector:
             logger.error(f"Error syncing open positions TP: {e}")
             return 0
 
-    def sync_pending_orders_tp(self, points: Optional[int] = None) -> int:
+    def sync_pending_orders_tp(self, points: int | None = None) -> int:
         """Inspects all live MT5 pending orders and modifies any with tp == 0.0 to have proper TP."""
         if not self.connected:
             return 0
@@ -478,7 +474,7 @@ class MT5Connector:
             orders = mt5.orders_get()
             if not orders:
                 return 0
-            
+
             modified_count = 0
             for o in orders:
                 if o.tp == 0.0 or o.tp is None:
@@ -521,7 +517,7 @@ class MT5Connector:
             logger.error(f"Error cancelling MT5 order {ticket}: {e}")
             return False
 
-    def fetch_live_pending_orders(self) -> List[TradeOrder]:
+    def fetch_live_pending_orders(self) -> list[TradeOrder]:
         """Fetches real pending orders from MetaTrader 5 terminal."""
         if not self.connected:
             return []

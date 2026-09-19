@@ -1,11 +1,9 @@
 """Unit & Integration Tests for CYBER SWARM TRADING OS - Execution Modes (LIVE, PAPER, BACKTEST, SAFE)"""
-import pytest
-from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 
 from cyber_swarm.server.app import app
 from cyber_swarm.core.config import config, ExecutionMode
-from cyber_swarm.core.models import OrderStatus, OrderDirection, OrderType
+from cyber_swarm.core.models import OrderStatus
 
 client = TestClient(app)
 

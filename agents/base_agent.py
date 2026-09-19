@@ -1,11 +1,10 @@
 """CYBER SWARM TRADING OS - Base Agent Class"""
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
-import time
-from typing import Dict, Any, List, Optional
+from datetime import datetime, UTC
+from typing import Any
 import logging
 
-from cyber_swarm.core.models import AgentSignal, OrderDirection, MarketTick
+from cyber_swarm.core.models import AgentSignal, MarketTick
 from cyber_swarm.core.aicl import AICLMessage
 
 logger = logging.getLogger("cyber_swarm.agent")
@@ -26,12 +25,12 @@ class BaseSwarmAgent(ABC):
         self.version = version
         self.status = "SYNCED"  # SYNCED, PROCESSING, IDLE, DEGRADED
         self.last_latency_ms: float = 0.0
-        self.last_heartbeat = datetime.now(timezone.utc)
+        self.last_heartbeat = datetime.now(UTC)
         self.total_evaluations: int = 0
-        self.memory: Dict[str, Any] = {}
+        self.memory: dict[str, Any] = {}
 
     @abstractmethod
-    async def evaluate(self, tick: MarketTick, context_data: Optional[Dict[str, Any]] = None) -> AgentSignal:
+    async def evaluate(self, tick: MarketTick, context_data: dict[str, Any] | None = None) -> AgentSignal:
         """Evaluates market conditions and produces a typed AgentSignal."""
         pass
 
@@ -57,7 +56,7 @@ class BaseSwarmAgent(ABC):
         )
         return msg.encode()
 
-    def get_telemetry(self) -> Dict[str, Any]:
+    def get_telemetry(self) -> dict[str, Any]:
         """Returns the real-time node telemetry dictionary."""
         return {
             "agent_id": self.agent_id,

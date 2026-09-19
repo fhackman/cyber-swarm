@@ -1,7 +1,7 @@
 """CYBER SWARM TRADING OS - Smart Order Execution Router (VESKA)"""
 import uuid
-from datetime import datetime, timezone
-from typing import List, Dict, Optional, Union, Any
+from datetime import datetime, UTC
+from typing import Any
 import logging
 
 from cyber_swarm.core.models import (
@@ -19,15 +19,15 @@ from cyber_swarm.core.models import (
     ReconciliationRecord,
     ReconciliationReport
 )
-from cyber_swarm.core.config import config, ExecutionMode
+from cyber_swarm.core.config import config
 
 logger = logging.getLogger("cyber_swarm.router")
 
 class ExecutionRouter:
     def __init__(self):
-        self.orders: Dict[str, TradeOrder] = {}
-        self.pending_orders: Dict[str, TradeOrder] = {}
-        self.active_positions: Dict[str, Position] = {}
+        self.orders: dict[str, TradeOrder] = {}
+        self.pending_orders: dict[str, TradeOrder] = {}
+        self.active_positions: dict[str, Position] = {}
         self.portfolio = PortfolioState(
             net_equity=config.initial_equity,
             realized_pnl_mtd=142390.00,
@@ -98,7 +98,7 @@ class ExecutionRouter:
         symbol: str,
         direction: OrderDirection,
         entry_price: float,
-        points: Optional[int] = None
+        points: int | None = None
     ) -> float:
         """Calculates Take Profit price target based on point calibration (100 - 300 points)."""
         tp_pts = points if points is not None else config.take_profit_points
@@ -120,7 +120,7 @@ class ExecutionRouter:
         tick: MarketTick
     ) -> TradeOrder:
         order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
-        
+
         trace = [
             f"Consensus achieved: {consensus.score*100:.1f}% {consensus.direction.value}",
             f"Risk Gate Approved: lot={risk_eval.lot_size} risk={risk_eval.estimated_risk_pct:.2f}%",
@@ -203,9 +203,9 @@ class ExecutionRouter:
         direction: OrderDirection,
         order_type: OrderType,
         limit_price: float,
-        cycle_id: Union[int, str] = 0,
-        take_profit_points: Optional[int] = None,
-        lot_size: Optional[float] = None
+        cycle_id: int | str = 0,
+        take_profit_points: int | None = None,
+        lot_size: float | None = None
     ) -> TradeOrder:
         """Creates and tracks a pending limit order with adjustable lot size and auto take profit."""
         if lot_size is None:
@@ -240,7 +240,7 @@ class ExecutionRouter:
         logger.info(f"Created pending limit order: {order_id} {order_type.value} {symbol} @ {limit_price} (TP: {tp_price})")
         return order
 
-    def check_pending_orders(self, tick: MarketTick) -> List[TradeOrder]:
+    def check_pending_orders(self, tick: MarketTick) -> list[TradeOrder]:
         """Checks pending limit orders against current tick; fills orders when price touches limit."""
         filled_orders = []
         for order_id, order in list(self.pending_orders.items()):
@@ -250,14 +250,12 @@ class ExecutionRouter:
             should_fill = False
             fill_price = order.target_price
 
-            if order.order_type == OrderType.BUY_LIMIT:
-                if tick.ask <= order.target_price or tick.price <= order.target_price:
-                    should_fill = True
-                    fill_price = tick.ask
-            elif order.order_type == OrderType.SELL_LIMIT:
-                if tick.bid >= order.target_price or tick.price >= order.target_price:
-                    should_fill = True
-                    fill_price = tick.bid
+            if order.order_type == OrderType.BUY_LIMIT and (tick.ask <= order.target_price or tick.price <= order.target_price):
+                should_fill = True
+                fill_price = tick.ask
+            elif order.order_type == OrderType.SELL_LIMIT and (tick.bid >= order.target_price or tick.price >= order.target_price):
+                should_fill = True
+                fill_price = tick.bid
 
             if should_fill:
                 order.status = OrderStatus.FILLED
@@ -292,7 +290,7 @@ class ExecutionRouter:
         self.portfolio.open_positions = list(self.active_positions.values())
         return filled_orders
 
-    def cancel_pending_order(self, order_id: str) -> Optional[TradeOrder]:
+    def cancel_pending_order(self, order_id: str) -> TradeOrder | None:
         """Cancels an active pending limit order."""
         if order_id in self.pending_orders:
             order = self.pending_orders.pop(order_id)
@@ -304,9 +302,9 @@ class ExecutionRouter:
 
     def reconcile_pending_orders(
         self,
-        current_ticks: Dict[str, MarketTick],
-        current_consensus: Optional[Dict[str, ConsensusResult]] = None,
-        mt5_orders: Optional[List[Any]] = None,
+        current_ticks: dict[str, MarketTick],
+        current_consensus: dict[str, ConsensusResult] | None = None,
+        mt5_orders: list[Any] | None = None,
         downtime_seconds: float = 0.0
     ) -> ReconciliationReport:
         """
@@ -318,8 +316,8 @@ class ExecutionRouter:
           4. Swarm Directional Alignment (cancel if swarm consensus reversed >= 70% in opposite direction)
           5. Price Validity & Gap Inversion (BUY_LIMIT <= ask/market, SELL_LIMIT >= bid/market without fill -> cancel)
         """
-        now = datetime.now(timezone.utc)
-        records: List[ReconciliationRecord] = []
+        now = datetime.now(UTC)
+        records: list[ReconciliationRecord] = []
         retained_count = 0
         cancelled_count = 0
         filled_count = 0
@@ -434,8 +432,9 @@ class ExecutionRouter:
                 ))
                 continue
 
-            if order.take_profit_points is not None:
-                if order.take_profit_points < config.take_profit_points_min or order.take_profit_points > config.take_profit_points_max:
+            if order.take_profit_points is not None and (
+                order.take_profit_points < config.take_profit_points_min or order.take_profit_points > config.take_profit_points_max
+            ):
                     order.status = OrderStatus.CANCELLED
                     reason = f"RISK_INVARIANT_BREACH: TP points {order.take_profit_points} outside [{config.take_profit_points_min}, {config.take_profit_points_max}]"
                     order.decision_trace.append(f"Reconciliation Cancel: {reason}")
@@ -458,9 +457,7 @@ class ExecutionRouter:
             # Condition 2: Swarm Consensus Reversal
             if cons:
                 is_reversed = False
-                if order.direction == OrderDirection.BUY and cons.direction == OrderDirection.SELL and cons.score >= config.consensus_signal_min:
-                    is_reversed = True
-                elif order.direction == OrderDirection.SELL and cons.direction == OrderDirection.BUY and cons.score >= config.consensus_signal_min:
+                if order.direction == OrderDirection.BUY and cons.direction == OrderDirection.SELL and cons.score >= config.consensus_signal_min or order.direction == OrderDirection.SELL and cons.direction == OrderDirection.BUY and cons.score >= config.consensus_signal_min:
                     is_reversed = True
 
                 if is_reversed:
@@ -486,12 +483,12 @@ class ExecutionRouter:
             # Condition 1: Price Validity & Gap Inversion
             if tick:
                 is_inverted = False
-                if order.order_type == OrderType.BUY_LIMIT:
-                    if tick.ask <= limit_price or tick.price <= limit_price:
-                        is_inverted = True
-                elif order.order_type == OrderType.SELL_LIMIT:
-                    if tick.bid >= limit_price or tick.price >= limit_price:
-                        is_inverted = True
+                if (
+                    order.order_type == OrderType.BUY_LIMIT and (tick.ask <= limit_price or tick.price <= limit_price)
+                ) or (
+                    order.order_type == OrderType.SELL_LIMIT and (tick.bid >= limit_price or tick.price >= limit_price)
+                ):
+                    is_inverted = True
 
                 if is_inverted:
                     order.status = OrderStatus.CANCELLED
@@ -515,7 +512,7 @@ class ExecutionRouter:
 
             # All checks passed: Retain order
             retained_count += 1
-            order.decision_trace.append(f"Reconciliation: Order validated and retained")
+            order.decision_trace.append("Reconciliation: Order validated and retained")
             records.append(ReconciliationRecord(
                 order_id=order_id,
                 symbol=symbol,
@@ -531,7 +528,7 @@ class ExecutionRouter:
 
         self.portfolio.pending_orders = list(self.pending_orders.values())
         self.portfolio.open_positions = list(self.active_positions.values())
-        
+
         report = ReconciliationReport(
             reconciliation_id=f"REC-{uuid.uuid4().hex[:8].upper()}",
             timestamp=now,
@@ -547,9 +544,9 @@ class ExecutionRouter:
         logger.info(f"Order reconciliation complete: Reviewed={total_reviewed} Retained={retained_count} Cancelled={cancelled_count} AdoptedFilled={filled_count}")
         return report
 
-    def apply_trailing_stop(self, tick: MarketTick) -> List[str]:
+    def apply_trailing_stop(self, tick: MarketTick) -> list[str]:
         """Ratchets trailing stop loss in profit direction, closes position if SL is touched."""
-        msgs = []
+        msgs: list[str] = []
         if not config.trailing_stop_enabled:
             return msgs
 
@@ -596,9 +593,9 @@ class ExecutionRouter:
         self.portfolio.open_positions = list(self.active_positions.values())
         return msgs
 
-    def apply_take_profit(self, tick: MarketTick) -> List[str]:
+    def apply_take_profit(self, tick: MarketTick) -> list[str]:
         """Auto-closes positions when mark price reaches the automated Take Profit target (100-300 points)."""
-        msgs = []
+        msgs: list[str] = []
         if not config.take_profit_enabled:
             return msgs
 
@@ -609,12 +606,12 @@ class ExecutionRouter:
             decimals = 5 if pos.symbol == "EURUSD" else 2
             hit = False
 
-            if pos.direction == OrderDirection.BUY:
-                if tick.bid >= pos.take_profit or tick.price >= pos.take_profit:
-                    hit = True
-            elif pos.direction == OrderDirection.SELL:
-                if tick.ask <= pos.take_profit or tick.price <= pos.take_profit:
-                    hit = True
+            if (
+                pos.direction == OrderDirection.BUY and (tick.bid >= pos.take_profit or tick.price >= pos.take_profit)
+            ) or (
+                pos.direction == OrderDirection.SELL and (tick.ask <= pos.take_profit or tick.price <= pos.take_profit)
+            ):
+                hit = True
 
             if hit:
                 realized = self.close_position(pos_id, pos.take_profit)
@@ -626,7 +623,7 @@ class ExecutionRouter:
         self.portfolio.open_positions = list(self.active_positions.values())
         return msgs
 
-    def update_positions(self, tick: MarketTick) -> List[str]:
+    def update_positions(self, tick: MarketTick) -> list[str]:
         """Updates mark-to-market valuations and auto-closes positions reaching take-profit/stop-loss."""
         closed_msgs = []
         total_unrealized = 0.0
@@ -670,5 +667,5 @@ class ExecutionRouter:
         self.portfolio.open_positions = list(self.active_positions.values())
         return realized
 
-    def get_recent_orders(self, limit: int = 15) -> List[TradeOrder]:
+    def get_recent_orders(self, limit: int = 15) -> list[TradeOrder]:
         return list(self.orders.values())[-limit:]

@@ -1,13 +1,20 @@
 """Unit Tests for SQLite Cryptographic Audit Persistence"""
-import os
-from pathlib import Path
-from cyber_swarm.audit.persistence import AuditPersistence
+import hashlib
+import json
+
 from cyber_swarm.audit.ledger import AuditRecord
-from cyber_swarm.core.models import TradeOrder, OrderDirection, OrderStatus
+from cyber_swarm.audit.persistence import AuditPersistence
+from cyber_swarm.core.models import OrderDirection, OrderStatus, TradeOrder
+
 
 def test_audit_persistence_crud(tmp_path):
     db_file = tmp_path / "test_audit.db"
     store = AuditPersistence(db_file)
+
+    p1 = {"key": "val1"}
+    h0 = "0" * 64
+    b1 = f"112:00:00.000SYSTEMTEST_INITTest record 1{json.dumps(p1, sort_keys=True)}{h0}"
+    h1 = hashlib.sha256(b1.encode()).hexdigest()
 
     rec1 = AuditRecord(
         index=1,
@@ -15,19 +22,24 @@ def test_audit_persistence_crud(tmp_path):
         source="SYSTEM",
         event_type="TEST_INIT",
         message="Test record 1",
-        payload={"key": "val1"},
-        prev_hash="0" * 64,
-        hash="a" * 64
+        payload=p1,
+        prev_hash=h0,
+        hash=h1
     )
+
+    p2 = {"approved": True}
+    b2 = f"212:00:01.000RUNERISK_CHECKRisk passed{json.dumps(p2, sort_keys=True)}{h1}"
+    h2 = hashlib.sha256(b2.encode()).hexdigest()
+
     rec2 = AuditRecord(
         index=2,
         timestamp="12:00:01.000",
         source="RUNE",
         event_type="RISK_CHECK",
         message="Risk passed",
-        payload={"approved": True},
-        prev_hash="a" * 64,
-        hash="b" * 64
+        payload=p2,
+        prev_hash=h1,
+        hash=h2
     )
 
     store.persist_record(rec1)

@@ -8,9 +8,9 @@ Computes mathematical Smart Money Concepts (SMC) & statistical indicators:
 5. Market Structure: Break of Structure (BOS) and Change of Character (CHoCH)
 6. Order Blocks (OB) & Exponential Moving Averages (EMA)
 """
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from enum import Enum
-from typing import List, Dict, Optional, Any
+from typing import Any
 from pydantic import BaseModel, Field
 
 class MarketStructure(str, Enum):
@@ -23,7 +23,7 @@ class MarketStructure(str, Enum):
     CHOCH_BEARISH = "CHOCH_BEARISH"
 
 class Candle(BaseModel):
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     open: float
     high: float
     low: float
@@ -39,20 +39,20 @@ class FeatureSnapshot(BaseModel):
     ema_20: float
     ema_50: float
     trend: str
-    swing_highs: List[float] = Field(default_factory=list)
-    swing_lows: List[float] = Field(default_factory=list)
-    active_fvgs: List[Dict[str, Any]] = Field(default_factory=list)
-    liquidity_sweeps: List[str] = Field(default_factory=list)
+    swing_highs: list[float] = Field(default_factory=list)
+    swing_lows: list[float] = Field(default_factory=list)
+    active_fvgs: list[dict[str, Any]] = Field(default_factory=list)
+    liquidity_sweeps: list[str] = Field(default_factory=list)
     market_structure: MarketStructure
-    order_block: Optional[Dict[str, Any]] = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    order_block: dict[str, Any] | None = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 class QuantFeatureEngine:
     """Institutional-grade Quantitative & Market Structure Engine."""
     def __init__(self, buffer_size: int = 200):
         self.buffer_size = buffer_size
         # { "XAUUSD_M15": [Candle, ...] }
-        self._buffers: Dict[str, List[Candle]] = {}
+        self._buffers: dict[str, list[Candle]] = {}
 
     def get_key(self, symbol: str, timeframe: str) -> str:
         return f"{symbol.upper()}_{timeframe.upper()}"
@@ -65,14 +65,14 @@ class QuantFeatureEngine:
         if len(self._buffers[key]) > self.buffer_size:
             self._buffers[key].pop(0)
 
-    def load_candles(self, symbol: str, timeframe: str, candles: List[Candle]):
+    def load_candles(self, symbol: str, timeframe: str, candles: list[Candle]):
         key = self.get_key(symbol, timeframe)
         self._buffers[key] = list(candles[-self.buffer_size:])
 
-    def calculate_atr(self, candles: List[Candle], period: int = 14) -> float:
+    def calculate_atr(self, candles: list[Candle], period: int = 14) -> float:
         if len(candles) < 2:
             return 1.0
-        
+
         tr_list = []
         for i in range(1, len(candles)):
             c_curr = candles[i]
@@ -83,29 +83,29 @@ class QuantFeatureEngine:
                 abs(c_curr.low - c_prev.close)
             )
             tr_list.append(tr)
-        
+
         if not tr_list:
             return 1.0
         effective_period = min(period, len(tr_list))
         return float(sum(tr_list[-effective_period:]) / effective_period)
 
-    def calculate_ema(self, closes: List[float], period: int) -> float:
+    def calculate_ema(self, closes: list[float], period: int) -> float:
         if not closes:
             return 0.0
         if len(closes) < period:
             return float(sum(closes) / len(closes))
-        
+
         multiplier = 2.0 / (period + 1.0)
         ema = float(sum(closes[:period]) / period)
         for val in closes[period:]:
             ema = (val - ema) * multiplier + ema
         return float(ema)
 
-    def detect_swings(self, candles: List[Candle], lookback: int = 2) -> Dict[str, List[float]]:
+    def detect_swings(self, candles: list[Candle], lookback: int = 2) -> dict[str, list[float]]:
         """Detects fractal swing highs and swing lows."""
-        highs: List[float] = []
-        lows: List[float] = []
-        
+        highs: list[float] = []
+        lows: list[float] = []
+
         n = len(candles)
         if n < (lookback * 2 + 1):
             return {"highs": highs, "lows": lows}
@@ -132,16 +132,16 @@ class QuantFeatureEngine:
 
         return {"highs": highs[-5:], "lows": lows[-5:]}
 
-    def detect_fvg(self, candles: List[Candle]) -> List[Dict[str, Any]]:
+    def detect_fvg(self, candles: list[Candle]) -> list[dict[str, Any]]:
         """Identifies 3-bar Fair Value Gaps (Bullish Discount / Bearish Premium)."""
-        fvgs = []
+        fvgs: list[dict[str, Any]] = []
         if len(candles) < 3:
             return fvgs
 
         for i in range(2, len(candles)):
             c1 = candles[i - 2]
             c3 = candles[i]
-            
+
             # Bullish FVG: Low of candle 3 is higher than High of candle 1
             if c3.low > c1.high:
                 gap_size = c3.low - c1.high
@@ -166,9 +166,9 @@ class QuantFeatureEngine:
                     })
         return fvgs[-4:]
 
-    def detect_liquidity_sweeps(self, candles: List[Candle], swing_highs: List[float], swing_lows: List[float]) -> List[str]:
+    def detect_liquidity_sweeps(self, candles: list[Candle], swing_highs: list[float], swing_lows: list[float]) -> list[str]:
         """Detects whether recent candle wicks swept major swing points and closed inside."""
-        sweeps = []
+        sweeps: list[str] = []
         if not candles or (not swing_highs and not swing_lows):
             return sweeps
 
@@ -177,7 +177,7 @@ class QuantFeatureEngine:
             # Wick poked above swing high, but close is below swing high -> Bearish Liquidity Sweep
             if recent.high > sh and recent.close < sh:
                 sweeps.append(f"BEARISH_SWEEP_HIGH_{sh}")
-        
+
         for sl in swing_lows:
             # Wick poked below swing low, but close is above swing low -> Bullish Liquidity Sweep
             if recent.low < sl and recent.close > sl:
@@ -185,7 +185,7 @@ class QuantFeatureEngine:
 
         return sweeps
 
-    def detect_market_structure(self, candles: List[Candle], swings: Dict[str, List[float]]) -> MarketStructure:
+    def detect_market_structure(self, candles: list[Candle], swings: dict[str, list[float]]) -> MarketStructure:
         """Determines market structure (BOS/CHoCH/Trend)."""
         if len(candles) < 5 or not swings["highs"] or not swings["lows"]:
             return MarketStructure.EQUILIBRIUM
@@ -212,7 +212,7 @@ class QuantFeatureEngine:
     def calculate_features(self, symbol: str, timeframe: str = "M15") -> FeatureSnapshot:
         key = self.get_key(symbol, timeframe)
         candles = self._buffers.get(key, [])
-        
+
         if not candles:
             # Synthesize baseline candle if buffer is empty
             base_price = 2384.42 if symbol == "XAUUSD" else (67412.10 if symbol == "BTCUSD" else 1.0894)

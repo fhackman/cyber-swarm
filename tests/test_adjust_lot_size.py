@@ -1,7 +1,7 @@
 """CYBER SWARM TRADING OS - Test Suite: Adjustable Lot Size (0.01 - 5.00)"""
 import pytest
 from fastapi.testclient import TestClient
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from cyber_swarm.core.config import config
 from cyber_swarm.core.models import (
@@ -59,7 +59,7 @@ def sample_tick():
         spread=0.25,
         volume_24h=50000.0,
         change_pct=0.84,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(UTC)
     )
 
 

@@ -3,7 +3,6 @@
 Aggregates heterogeneous agent votes using reliability and conviction weighting:
     Consensus = Σ(weight × confidence × reliability × direction_scalar) / Σ(weight)
 """
-from typing import List, Dict, Any
 from cyber_swarm.core.models import (
     AgentSignal,
     ConsensusResult,
@@ -16,7 +15,7 @@ class ConsensusEngine:
     def __init__(self):
         self.cycle_counter = 84209
 
-    def aggregate(self, signals: List[AgentSignal], symbol: str) -> ConsensusResult:
+    def aggregate(self, signals: list[AgentSignal], symbol: str) -> ConsensusResult:
         self.cycle_counter += 1
         if not signals:
             return ConsensusResult(
@@ -56,7 +55,7 @@ class ConsensusEngine:
                 hold_weight += effective_weight * (1.0 - sig.confidence)
 
             weighted_direction_score += effective_weight * sig.confidence * scalar
-            
+
             votes[sig.agent_id] = {
                 "direction": sig.direction.value,
                 "confidence": round(sig.confidence, 4),
@@ -65,11 +64,6 @@ class ConsensusEngine:
                 "evidence": sig.evidence
             }
             all_evidence.extend([f"{sig.agent_id}:{ev}" for ev in sig.evidence])
-
-        if total_weight > 0:
-            norm_score = abs(weighted_direction_score) / total_weight
-        else:
-            norm_score = 0.0
 
         # Determine dominant direction
         if buy_weight > sell_weight and buy_weight > hold_weight:

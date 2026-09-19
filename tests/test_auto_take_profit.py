@@ -1,6 +1,6 @@
 """CYBER SWARM TRADING OS - Auto Take Profit Engine (100 - 300 Points) Tests"""
 import pytest
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from fastapi.testclient import TestClient
 
 from cyber_swarm.core.config import config
@@ -125,7 +125,7 @@ async def test_execute_order_assigns_take_profit(router):
         spread=0.4,
         volume_24h=50000.0,
         change_pct=0.5,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(UTC)
     )
     consensus = ConsensusResult(
         cycle_id=1,
@@ -184,7 +184,7 @@ def test_pending_limit_order_take_profit(router):
         spread=0.2,
         volume_24h=50000.0,
         change_pct=0.1,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(UTC)
     )
     filled_orders = router.check_pending_orders(fill_tick)
     assert len(filled_orders) == 1
@@ -206,7 +206,7 @@ def test_apply_take_profit_buy_trigger(router):
         current_price=2730.0,
         take_profit=2732.0,
         take_profit_points=200,
-        open_time=datetime.now(timezone.utc),
+        open_time=datetime.now(UTC),
         trailing_active=False
     )
     router.active_positions[pos.position_id] = pos
@@ -221,7 +221,7 @@ def test_apply_take_profit_buy_trigger(router):
         spread=0.2,
         volume_24h=50000.0,
         change_pct=0.2,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(UTC)
     )
     msgs1 = router.apply_take_profit(tick1)
     assert len(msgs1) == 0
@@ -236,7 +236,7 @@ def test_apply_take_profit_buy_trigger(router):
         spread=0.2,
         volume_24h=50000.0,
         change_pct=0.5,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(UTC)
     )
     msgs2 = router.apply_take_profit(tick2)
     assert len(msgs2) == 1
@@ -257,7 +257,7 @@ def test_apply_take_profit_sell_trigger(router):
         current_price=2730.0,
         take_profit=2728.0,
         take_profit_points=200,
-        open_time=datetime.now(timezone.utc),
+        open_time=datetime.now(UTC),
         trailing_active=False
     )
     router.active_positions[pos.position_id] = pos
@@ -272,7 +272,7 @@ def test_apply_take_profit_sell_trigger(router):
         spread=0.2,
         volume_24h=50000.0,
         change_pct=-0.2,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(UTC)
     )
     msgs1 = router.apply_take_profit(tick1)
     assert len(msgs1) == 0
@@ -287,7 +287,7 @@ def test_apply_take_profit_sell_trigger(router):
         spread=0.2,
         volume_24h=50000.0,
         change_pct=-0.5,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(UTC)
     )
     msgs2 = router.apply_take_profit(tick2)
     assert len(msgs2) == 1
@@ -309,7 +309,7 @@ def test_apply_take_profit_disabled_toggle(router):
         current_price=2730.0,
         take_profit=2732.0,
         take_profit_points=200,
-        open_time=datetime.now(timezone.utc)
+        open_time=datetime.now(UTC)
     )
     router.active_positions[pos.position_id] = pos
 
@@ -321,7 +321,7 @@ def test_apply_take_profit_disabled_toggle(router):
         spread=0.2,
         volume_24h=50000.0,
         change_pct=0.5,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(UTC)
     )
     msgs = router.apply_take_profit(tick)
     assert len(msgs) == 0

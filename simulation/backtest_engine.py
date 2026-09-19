@@ -9,14 +9,11 @@ Calculates Institutional Quant Metrics:
     - Win Rate (%) & Average R-Multiple
 """
 import math
-from datetime import datetime, timezone
-from typing import List, Dict, Optional, Any
-from pydantic import BaseModel, Field
+from typing import Any
+from pydantic import BaseModel, Field, model_validator
 
 from cyber_swarm.core.models import (
     OrderDirection,
-    ConsensusResult,
-    RiskEvaluation,
     MarketTick
 )
 from cyber_swarm.quant.features import Candle, QuantFeatureEngine, feature_engine as global_fe
@@ -53,38 +50,47 @@ class BacktestReport(BaseModel):
     gross_loss: float
     profit_factor: float
     net_profit: float
+    net_pnl: float | None = None
     initial_equity: float = 1000000.0
     final_equity: float
     max_drawdown_pct: float
     sharpe_ratio: float
     sortino_ratio: float
-    trades: List[BacktestTrade] = Field(default_factory=list)
+    trades: list[BacktestTrade] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def sync_net_profit_and_pnl(self) -> "BacktestReport":
+        if self.net_pnl is None:
+            self.net_pnl = self.net_profit
+        elif self.net_profit == 0.0:
+            self.net_profit = self.net_pnl
+        return self
 
 class BacktestEngine:
-    def __init__(self, config: Optional[BacktestConfig] = None):
+    def __init__(self, config: BacktestConfig | None = None):
         self.config = config or BacktestConfig()
         self.feature_engine = QuantFeatureEngine(buffer_size=300)
         self.swarm = create_swarm()
         self.consensus_engine = ConsensusEngine()
         self.risk_gate = InstitutionalRiskGate()
 
-    async def run_simulation(self, candles: List[Candle], symbol: str = "XAUUSD") -> BacktestReport:
+    async def run_simulation(self, candles: list[Candle], symbol: str = "XAUUSD") -> BacktestReport:
         """Executes a chronological event-driven backtest across historical candles."""
         equity = self.config.initial_equity
         peak_equity = equity
         max_drawdown_pct = 0.0
 
-        trades: List[BacktestTrade] = []
-        equity_curve: List[float] = [equity]
-        trade_returns: List[float] = []
+        trades: list[BacktestTrade] = []
+        equity_curve: list[float] = [equity]
+        trade_returns: list[float] = []
 
-        active_position: Optional[Dict[str, Any]] = None
+        active_position: dict[str, Any] | None = None
         trade_counter = 0
 
         for i, candle in enumerate(candles):
             self.feature_engine.add_candle(symbol, "M15", candle)
             global_fe.add_candle(symbol, "M15", candle)
-            
+
             # Need at least 15 warmup candles for ATR & EMA
             if i < 15:
                 continue

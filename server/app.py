@@ -1,12 +1,10 @@
-"""CYBER SWARM TRADING OS - FastAPI Telemetry Server"""
 import asyncio
-import os
 import math
 import random
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
-from typing import Dict, Any, List, Set, Optional
+from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -15,7 +13,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 
 from cyber_swarm.core.config import config, ExecutionMode
-from cyber_swarm.core.models import MarketTick, OrderDirection, OrderType, ConsensusState, OrderStatus, NetworkStatus, ReconciliationReport
+from cyber_swarm.core.models import MarketTick, OrderDirection, OrderType, OrderStatus, NetworkStatus
 from cyber_swarm.agents.specialized_agents import create_swarm
 from cyber_swarm.consensus.consensus_engine import ConsensusEngine
 from cyber_swarm.risk.risk_gate import InstitutionalRiskGate
@@ -35,7 +33,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: Set[WebSocket] = set()
+        self.active_connections: set[WebSocket] = set()
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -44,7 +42,7 @@ class ConnectionManager:
     def disconnect(self, websocket: WebSocket):
         self.active_connections.discard(websocket)
 
-    async def broadcast(self, message: Dict[str, Any]):
+    async def broadcast(self, message: dict[str, Any]):
         payload = jsonable_encoder(message)
         for connection in list(self.active_connections):
             try:
@@ -64,7 +62,7 @@ mt5_conn = MT5Connector()
 
 current_consensus = None
 current_risk_eval = None
-current_ticks: Dict[str, MarketTick] = {}
+current_ticks: dict[str, MarketTick] = {}
 
 async def swarm_background_loop():
     """Continuous autonomous deliberation cycle broadcasting real-time telemetry."""
@@ -108,7 +106,7 @@ async def swarm_background_loop():
                     "USOIL": 0.10
                 }
                 scale = jitter_scales.get(sym, 0.05)
-                jitter = (random.random() - 0.5) * scale
+                jitter = (random.random() - 0.5) * scale  # nosec B311 - non-cryptographic mock simulation
                 decimals = 4 if sym == "EURUSD" else 2
                 tick.price = round(tick.price + jitter, decimals)
                 tick.bid = round(tick.price - tick.spread / 2.0, decimals)
@@ -176,7 +174,7 @@ async def swarm_background_loop():
 
             # 2. Run Swarm Deliberation
             signals = []
-            for agent_id, agent in swarm.items():
+            for _agent_id, agent in swarm.items():
                 sig = await agent.evaluate(tick)
                 signals.append(sig)
 
@@ -247,7 +245,7 @@ async def swarm_background_loop():
             # 6. Broadcast Telemetry Snapshot over WebSocket
             telemetry_payload = {
                 "type": "TELEMETRY_UPDATE",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "config": {
                     "mode": config.mode.value,
                     "auto_trade_enabled": config.auto_trade_enabled,
@@ -304,9 +302,11 @@ app = FastAPI(title="CYBER SWARM TRADING OS", version=config.version, lifespan=l
 
 # REST Endpoints
 @app.get("/api/state")
+@app.get("/api/telemetry")
 async def get_state():
     acc_info = mt5_conn.get_real_account_info()
     return {
+        "status": "ONLINE",
         "config": {
             "mode": config.mode.value,
             "auto_trade_enabled": config.auto_trade_enabled,
@@ -347,6 +347,7 @@ class KillswitchReq(BaseModel):
     reason: str = "Operator manual request"
 
 @app.post("/api/killswitch")
+@app.post("/api/risk/killswitch")
 async def set_killswitch(req: KillswitchReq):
     if req.action.lower() == "trigger":
         risk_gate.trigger_emergency_stop(req.reason)
@@ -354,7 +355,22 @@ async def set_killswitch(req: KillswitchReq):
     else:
         risk_gate.reset_emergency_stop()
         ledger.record_event("OPERATOR", "HALT_RESET", "Killswitch cleared. System resumed.")
-    return {"killswitch_active": risk_gate.killswitch_active}
+    status_str = "ENGAGED" if risk_gate.killswitch_active else "DISENGAGED"
+    return {
+        "status": status_str,
+        "killswitch_active": risk_gate.killswitch_active
+    }
+
+@app.get("/api/ledger/integrity")
+async def get_ledger_integrity():
+    in_memory = ledger.verify_chain()
+    sqlite_valid = audit_db.verify_stored_integrity()
+    return {
+        "status": "VALID" if (in_memory and sqlite_valid) else "INVALID",
+        "in_memory_valid": in_memory,
+        "sqlite_valid": sqlite_valid,
+        "record_count": len(ledger.records)
+    }
 
 class ModeReq(BaseModel):
     mode: ExecutionMode
@@ -369,7 +385,7 @@ async def set_mode(req: ModeReq):
     # Immediately broadcast mode change to all active WebSocket clients
     await manager.broadcast({
         "type": "MODE_CHANGE",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "mode": config.mode.value,
         "message": msg,
         "config": {
@@ -470,8 +486,8 @@ async def set_trailing_stop(req: TrailingStopReq):
     return {"trailing_stop_enabled": config.trailing_stop_enabled}
 
 class TakeProfitReq(BaseModel):
-    enabled: Optional[bool] = None
-    points: Optional[int] = None
+    enabled: bool | None = None
+    points: int | None = None
 
 @app.get("/api/takeprofit")
 async def get_take_profit():
@@ -508,8 +524,8 @@ class LimitOrderReq(BaseModel):
     direction: OrderDirection
     order_type: OrderType
     limit_price: float
-    take_profit_points: Optional[int] = None
-    lot_size: Optional[float] = None
+    take_profit_points: int | None = None
+    lot_size: float | None = None
 
 @app.post("/api/orders/limit")
 async def place_limit_order(req: LimitOrderReq):
@@ -525,12 +541,13 @@ async def place_limit_order(req: LimitOrderReq):
         )
     if req.order_type not in (OrderType.BUY_LIMIT, OrderType.SELL_LIMIT):
         raise HTTPException(status_code=400, detail="Invalid order type for limit order")
-    if req.take_profit_points is not None:
-        if req.take_profit_points < config.take_profit_points_min or req.take_profit_points > config.take_profit_points_max:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Take profit points must be between {config.take_profit_points_min} and {config.take_profit_points_max}"
-            )
+    if req.take_profit_points is not None and (
+        req.take_profit_points < config.take_profit_points_min or req.take_profit_points > config.take_profit_points_max
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Take profit points must be between {config.take_profit_points_min} and {config.take_profit_points_max}"
+        )
     target_lot = req.lot_size if req.lot_size is not None else config.fixed_lot_size
     if target_lot < config.min_lot_size or target_lot > config.max_lot_size:
         raise HTTPException(
@@ -542,7 +559,7 @@ async def place_limit_order(req: LimitOrderReq):
         direction=req.direction,
         order_type=req.order_type,
         limit_price=req.limit_price,
-        cycle_id=f"manual_{datetime.now(timezone.utc).strftime('%H%M%S')}",
+        cycle_id=f"manual_{datetime.now(UTC).strftime('%H%M%S')}",
         take_profit_points=req.take_profit_points,
         lot_size=target_lot
     )
@@ -555,7 +572,13 @@ async def place_limit_order(req: LimitOrderReq):
     audit_db.persist_order(order)
     audit_db.persist_record(ev)
     if mt5_conn.connected:
-        mt5_conn.send_pending_limit_order(order.symbol, order.direction, order.limit_price, lot_size=order.lot_size, tp=order.take_profit)
+        mt5_conn.send_pending_limit_order(
+            order.symbol,
+            order.direction,
+            order.effective_limit_price,
+            lot_size=order.lot_size,
+            tp=order.take_profit
+        )
     return {"status": "SUCCESS", "order": order.model_dump(mode="json")}
 
 @app.delete("/api/orders/pending/{order_id}")
@@ -602,15 +625,31 @@ async def trigger_manual_reconcile():
         "report": rec_report.model_dump(mode="json")
     }
 
+@app.post("/api/network/disconnect")
+async def network_disconnect():
+    """Manually disconnect network simulation for MT5 connector."""
+    mt5_conn.connected = False
+    router.portfolio.network_status = NetworkStatus.DISCONNECTED
+    ledger.record_event("OPERATOR", "NETWORK_DISCONNECT", "Manual simulated network disconnection")
+    return {"status": "DISCONNECTED", "connected": False}
+
+@app.post("/api/network/reconnect")
+async def network_reconnect():
+    """Manually reconnect network simulation for MT5 connector."""
+    mt5_conn.connected = True
+    router.portfolio.network_status = NetworkStatus.RECONNECTING
+    ledger.record_event("OPERATOR", "NETWORK_RECONNECT", "Manual network reconnection initiated")
+    return {"status": "RECONNECTING", "connected": True}
+
 @app.post("/api/mt5/sync-tp")
 async def trigger_mt5_tp_sync():
     """Manually triggers immediate Take Profit synchronization across all open positions and pending orders on MT5."""
     if not mt5_conn.connected:
         return {"status": "SKIPPED", "message": "MT5 terminal not connected", "open_positions_synced": 0, "pending_orders_synced": 0}
-    
+
     pos_count = mt5_conn.sync_open_positions_tp(config.take_profit_points)
     ord_count = mt5_conn.sync_pending_orders_tp(config.take_profit_points)
-    
+
     ev = ledger.record_event(
         source="VESKA",
         event_type="MT5_TP_SYNCED",
@@ -637,7 +676,7 @@ async def websocket_telemetry(websocket: WebSocket):
                 router.active_positions = {p.position_id: p for p in live_pos}
         initial_state = {
             "type": "INITIAL_SNAPSHOT",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "config": {
                 "mode": config.mode.value,
                 "auto_trade_enabled": config.auto_trade_enabled,
@@ -670,16 +709,18 @@ async def websocket_telemetry(websocket: WebSocket):
         await websocket.send_json(jsonable_encoder(initial_state))
         while True:
             try:
-                data = await asyncio.wait_for(websocket.receive_text(), timeout=15.0)
-            except asyncio.TimeoutError:
-                await websocket.send_json({"type": "HEARTBEAT", "timestamp": datetime.now(timezone.utc).isoformat()})
+                msg_text = await asyncio.wait_for(websocket.receive_text(), timeout=15.0)
+                if msg_text.strip().upper() == "PING":
+                    await websocket.send_json({"type": "PONG", "timestamp": datetime.now(UTC).isoformat()})
+            except TimeoutError:
+                await websocket.send_json({"type": "HEARTBEAT", "timestamp": datetime.now(UTC).isoformat()})
     except WebSocketDisconnect:
         manager.disconnect(websocket)
     except Exception as e:
         logger.error(f"WebSocket client disconnected or error: {e}")
         manager.disconnect(websocket)
 
-latest_backtest_report: Optional[BacktestReport] = None
+latest_backtest_report: BacktestReport | None = None
 
 class RunBacktestReq(BaseModel):
     symbol: str = "XAUUSD"
@@ -690,10 +731,9 @@ class RunBacktestReq(BaseModel):
 @app.post("/api/backtest/run")
 async def run_backtest_endpoint(req: RunBacktestReq):
     global latest_backtest_report
-    from datetime import timedelta
-    candles: List[Candle] = []
+    candles: list[Candle] = []
     sym = req.symbol.upper()
-    
+
     # Base price calculation from current ticks or sensible default
     if sym in current_ticks and current_ticks[sym].price > 0:
         base_price = current_ticks[sym].price
@@ -707,22 +747,22 @@ async def run_backtest_endpoint(req: RunBacktestReq):
         base_price = 2384.42
 
     # Synthesize realistic institutional candles with market wave cycles & volatility
-    base_ts = datetime.now(timezone.utc) - timedelta(minutes=15 * req.candle_count)
+    base_ts = datetime.now(UTC) - timedelta(minutes=15 * req.candle_count)
     curr = base_price
     for i in range(req.candle_count):
         # Multi-cycle institutional order flow (trend waves + intraday oscillation)
         wave = math.sin(i / 5.0) * (curr * 0.005) + math.cos(i / 12.0) * (curr * 0.003)
-        drift = (wave * 0.25) + ((random.random() - 0.49) * (curr * 0.002))
+        drift = (wave * 0.25) + ((random.random() - 0.49) * (curr * 0.002))  # nosec B311 - simulation data
         curr += drift
-        high = curr + abs(random.uniform(0.3, 1.2)) * (curr * 0.002)
-        low = curr - abs(random.uniform(0.3, 1.2)) * (curr * 0.002)
+        high = curr + abs(random.uniform(0.3, 1.2)) * (curr * 0.002)  # nosec B311 - simulation data
+        low = curr - abs(random.uniform(0.3, 1.2)) * (curr * 0.002)  # nosec B311 - simulation data
         c = Candle(
             timestamp=base_ts + timedelta(minutes=15 * i),
             open=round(curr - drift, 4),
             high=round(max(high, curr, curr - drift), 4),
             low=round(min(low, curr, curr - drift), 4),
             close=round(curr, 4),
-            volume=round(random.uniform(500.0, 3500.0), 1)
+            volume=round(random.uniform(500.0, 3500.0), 1)  # nosec B311 - simulation data
         )
         candles.append(c)
 
@@ -744,11 +784,16 @@ async def run_backtest_endpoint(req: RunBacktestReq):
 
     await manager.broadcast({
         "type": "BACKTEST_REPORT",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "report": report.model_dump(mode="json")
     })
 
-    return report.model_dump(mode="json")
+    dump = report.model_dump(mode="json")
+    return {
+        "status": "SUCCESS",
+        "report": dump,
+        **dump
+    }
 
 @app.get("/api/backtest/latest")
 async def get_latest_backtest():

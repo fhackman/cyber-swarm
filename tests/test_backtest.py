@@ -1,15 +1,15 @@
 """Unit Tests for Backtest Simulation Engine"""
 import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, UTC
 from cyber_swarm.simulation.backtest_engine import BacktestEngine, BacktestConfig
 from cyber_swarm.quant.features import Candle
 
 @pytest.mark.asyncio
 async def test_backtest_simulation_run():
     engine = BacktestEngine(BacktestConfig(initial_equity=500000.0))
-    
+
     # Generate 50 synthetic trending candles
-    base_time = datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
     candles = []
     price = 2350.0
     for i in range(50):

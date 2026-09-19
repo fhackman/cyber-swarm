@@ -1,5 +1,5 @@
 """Unit Tests for Multi-Timeframe Candle Aggregator"""
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from cyber_swarm.quant.candle_aggregator import CandleAggregator
 from cyber_swarm.core.models import MarketTick
 
@@ -13,7 +13,7 @@ def test_candle_aggregator_in_progress():
         spread=0.4,
         volume_24h=100.0,
         change_pct=0.1,
-        timestamp=datetime.fromtimestamp(1700000000, tz=timezone.utc)
+        timestamp=datetime.fromtimestamp(1700000000, tz=UTC)
     )
     agg.ingest_tick(tick1)
 
@@ -34,11 +34,12 @@ def test_candle_aggregator_in_progress():
         spread=0.4,
         volume_24h=100.0,
         change_pct=0.1,
-        timestamp=datetime.fromtimestamp(1700000010, tz=timezone.utc)
+        timestamp=datetime.fromtimestamp(1700000010, tz=UTC)
     )
     agg.ingest_tick(tick2)
 
     c2 = agg.get_forming_candle("XAUUSD", "M1")
+    assert c2 is not None
     assert c2.high == 2385.0
     assert c2.close == 2385.0
     assert c2.volume == 2.0
@@ -53,7 +54,7 @@ def test_candle_closure_on_new_bar():
         spread=2.0,
         volume_24h=100.0,
         change_pct=0.1,
-        timestamp=datetime.fromtimestamp(1700000000, tz=timezone.utc)
+        timestamp=datetime.fromtimestamp(1700000000, tz=UTC)
     )
     agg.ingest_tick(tick1)
 
@@ -66,12 +67,13 @@ def test_candle_closure_on_new_bar():
         spread=2.0,
         volume_24h=100.0,
         change_pct=0.1,
-        timestamp=datetime.fromtimestamp(1700000065, tz=timezone.utc)
+        timestamp=datetime.fromtimestamp(1700000065, tz=UTC)
     )
     closed = agg.ingest_tick(tick2)
     assert len(closed) == 1
     assert closed[0].close == 67000.0
-    
+
     # New bar is forming
     forming = agg.get_forming_candle("BTCUSD", "M1")
+    assert forming is not None
     assert forming.open == 67100.0

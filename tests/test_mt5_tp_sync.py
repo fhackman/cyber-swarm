@@ -1,10 +1,8 @@
 """Tests for MT5 Take Profit synchronization engine, symbol calibration, and broker SL/TP orders."""
-import pytest
 from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 
-from cyber_swarm.core.models import OrderDirection, OrderType, OrderStatus, Position
-from cyber_swarm.core.config import config
+from cyber_swarm.core.models import OrderDirection
 from cyber_swarm.execution.mt5_connector import MT5Connector
 
 
@@ -12,18 +10,18 @@ def test_calculate_target_tp_buy_and_sell():
     conn = MT5Connector()
     # In disconnected simulation mode
     conn.connected = False
-    
+
     # XAUUSD: 200 points = 2.00
     buy_tp = conn.calculate_target_tp("XAUUSD", OrderDirection.BUY, 2400.00, points=200)
     assert buy_tp == 2402.00
-    
+
     sell_tp = conn.calculate_target_tp("XAUUSD", OrderDirection.SELL, 2400.00, points=200)
     assert sell_tp == 2398.00
-    
+
     # EURUSD: 200 points = 0.00200
     eur_buy = conn.calculate_target_tp("EURUSD", OrderDirection.BUY, 1.08500, points=200)
     assert eur_buy == 1.08700
-    
+
     eur_sell = conn.calculate_target_tp("EURUSD", OrderDirection.SELL, 1.08500, points=200)
     assert eur_sell == 1.08300
 
@@ -31,11 +29,11 @@ def test_calculate_target_tp_buy_and_sell():
 def test_calculate_target_tp_clamping():
     conn = MT5Connector()
     conn.connected = False
-    
+
     # Below min (50 clamped to 100 pt = 1.00)
     tp_low = conn.calculate_target_tp("XAUUSD", OrderDirection.BUY, 2400.00, points=50)
     assert tp_low == 2401.00
-    
+
     # Above max (500 clamped to 300 pt = 3.00)
     tp_high = conn.calculate_target_tp("XAUUSD", OrderDirection.BUY, 2400.00, points=500)
     assert tp_high == 2403.00
@@ -67,7 +65,7 @@ def test_sync_open_positions_tp_with_mock():
     mock_mt5.positions_get.return_value = [mock_pos_1, mock_pos_2]
     mock_mt5.TRADE_ACTION_SLTP = 6
     mock_mt5.TRADE_RETCODE_DONE = 10009
-    
+
     mock_res = MagicMock()
     mock_res.retcode = 10009
     mock_mt5.order_send.return_value = mock_res
@@ -103,7 +101,7 @@ def test_sync_pending_orders_tp_with_mock():
     mock_mt5.ORDER_TYPE_BUY_LIMIT = 2
     mock_mt5.TRADE_ACTION_MODIFY = 7
     mock_mt5.TRADE_RETCODE_DONE = 10009
-    
+
     mock_res = MagicMock()
     mock_res.retcode = 10009
     mock_mt5.order_send.return_value = mock_res
@@ -147,7 +145,7 @@ def test_send_pending_limit_order_auto_includes_tp():
 def test_api_sync_tp_endpoint():
     from cyber_swarm.server.app import app
     client = TestClient(app)
-    
+
     response = client.post("/api/mt5/sync-tp")
     assert response.status_code == 200
     data = response.json()

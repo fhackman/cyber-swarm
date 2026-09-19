@@ -1,6 +1,6 @@
 """CYBER SWARM TRADING OS - Network Reconnection & Pending Order Reconciliation Tests"""
 import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, UTC
 from fastapi.testclient import TestClient
 
 from cyber_swarm.core.config import config
@@ -9,14 +9,12 @@ from cyber_swarm.core.models import (
     OrderStatus,
     OrderDirection,
     OrderType,
-    Position,
     PortfolioState,
     MarketTick,
     ConsensusResult,
     ConsensusState,
     NetworkStatus,
-    ReconciliationAction,
-    ReconciliationReport
+    ReconciliationAction
 )
 from cyber_swarm.execution.router import ExecutionRouter
 from cyber_swarm.execution.mt5_connector import MT5Connector
@@ -212,7 +210,7 @@ def test_stale_order_ttl_expiration(router):
         limit_price=75.00
     )
     # Set order timestamp to 4000 seconds ago
-    order.timestamp = datetime.now(timezone.utc) - timedelta(seconds=4000)
+    order.timestamp = datetime.now(UTC) - timedelta(seconds=4000)
 
     ticks = {
         "USOIL": MarketTick(symbol="USOIL", price=80.0, bid=79.95, ask=80.05, spread=0.1, volume_24h=100, change_pct=0.1)

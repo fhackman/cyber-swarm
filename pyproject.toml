@@ -45,6 +45,9 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0",
+    "bandit>=1.7.8",
 ]
 
 [tool.pytest.ini_options]
@@ -52,3 +55,33 @@ minversion = "7.0"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 python_files = ["test_*.py"]
+pythonpath = [".."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # Pyflakes
+    "B",     # flake8-bugbear
+    "UP",    # pyupgrade
+    "C4",    # flake8-comprehensions
+    "SIM",   # flake8-simplify
+]
+ignore = [
+    "E501",  # Line length handled gracefully
+    "UP042", # Preserve (str, Enum) for Python 3.10+ and Pydantic serialization parity
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "B011"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+check_untyped_defs = true
